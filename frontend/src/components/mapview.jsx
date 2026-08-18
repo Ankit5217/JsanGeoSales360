@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
+import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
@@ -1837,7 +1838,7 @@ function addLiveAlert(type, title, message) {
 }
 useEffect(() => {
 
-    const ws = new WebSocket("ws://127.0.0.1:8000/ws");
+    const ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
 

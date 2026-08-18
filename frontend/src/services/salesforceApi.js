@@ -1,4 +1,4 @@
-const BASE_URL = "http://127.0.0.1:8000";
+import { API_BASE_URL as BASE_URL } from "../config/apiBase";
 export async function getAccounts() {
 
     try {
