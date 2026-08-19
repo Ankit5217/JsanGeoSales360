@@ -2154,7 +2154,7 @@ return (
         maxWidth: "1600px",
         width: "95%",
         margin: "25px auto",
-        background: "#0888ff",
+        background: "linear-gradient(135deg, #0B2E4F 0%, #1B5D96 100%)",
         color: "#fff",
         padding: "30px",
         borderRadius: "18px",
@@ -2166,7 +2166,8 @@ return (
     style={{
         textAlign: "center",
         marginTop: 0,
-        marginBottom: "30px"
+        marginBottom: "30px",
+        color: "#fff"
     }}
 >
 AI Executive Dashboard
@@ -2648,7 +2649,7 @@ fontWeight:"bold"
 
 <h4>💰 Current Revenue</h4>
 
-<h2>
+<h2 style={{ color: "#fff" }}>
 
 ₹{executiveSummary.totalRevenue.toLocaleString("en-IN")}
 
@@ -2798,7 +2799,7 @@ fontSize:"18px"
 
 <h4>🚀 Growth</h4>
 
-<h2>
+<h2 style={{ color: "#fff" }}>
 
 {executiveSummary.growth}%
 
