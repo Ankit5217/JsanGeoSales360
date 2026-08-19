@@ -1,5 +1,6 @@
 import React from "react";
 import { useUser } from "../context/UserContext";
+import jsanLogo from "../assets/jsan-logo.jpg";
 
 export default function Sidebar({ activeModule, onModuleChange }) {
         const {
@@ -106,13 +107,28 @@ export default function Sidebar({ activeModule, onModuleChange }) {
 
             <div
                 style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
                     padding: "0 20px 25px",
                     fontSize: "20px",
                     fontWeight: "bold",
                     borderBottom: "1px solid rgba(255,255,255,0.15)"
                 }}
             >
-                JSAN GeoSales 360
+                <img
+                    src={jsanLogo}
+                    alt="JSAN logo"
+                    style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "6px",
+                        objectFit: "cover"
+                    }}
+                />
+                <span>
+                    GeoSales 360
+                </span>
             </div>
 
             <div
