@@ -2281,15 +2281,15 @@ AI Executive Dashboard
 <div
     style={{
         display: "grid",
-        gridTemplateColumns: "1.2fr 1.2fr 0.8fr 1fr 0.8fr",
+        gridTemplateColumns: "1fr 1fr",
         gap: "20px",
-        alignItems: "center",
-        marginBottom: "30px"
+        alignItems: "stretch",
+        marginTop: "25px"
     }}
 >
+
   <div
     style={{
-        marginTop: "25px",
         background: "#fff",
         color: "#222",
         padding: "20px",
@@ -2426,9 +2426,9 @@ fontWeight:"bold"
 </div>
 
 </div>
+
   <div
     style={{
-        margin: "20px",
         background: "#fff",
         padding: "20px",
         borderRadius: "12px",
@@ -2436,14 +2436,14 @@ fontWeight:"bold"
     }}
 >
 
-    <h2
+    <h3
         style={{
             marginTop: 0,
             color: "#0B2E4F"
         }}
     >
         🚨 Live AI Alerts
-        </h2>
+        </h3>
         {liveAlerts.length === 0 ? (
 
     <div
@@ -2533,6 +2533,15 @@ fontWeight:"bold"
 
 )}
 
+    <h4
+        style={{
+            marginTop: "20px",
+            marginBottom: "12px",
+            color: "#0B2E4F"
+        }}
+    >
+        AI-Generated Alerts
+    </h4>
 
     <div
         style={{
@@ -2611,14 +2620,29 @@ fontWeight:"bold"
 
 </div>
 
+</div>
+
 <div
     style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: "20px",
+        alignItems: "stretch",
+        marginTop: "25px",
+        marginBottom: "10px"
+    }}
+>
+
+<div
+    style={{
+        background: "rgba(255,255,255,0.12)",
+        borderRadius: "12px",
+        padding: "20px",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
-        alignItems: "center",
-        height: "100%"
+        alignItems: "center"
     }}
 >
 
@@ -2634,6 +2658,9 @@ fontWeight:"bold"
 
 <div
     style={{
+        background: "rgba(255,255,255,0.12)",
+        borderRadius: "12px",
+        padding: "20px",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
@@ -2758,12 +2785,14 @@ fontSize:"18px"
 
 <div
     style={{
+        background: "rgba(255,255,255,0.12)",
+        borderRadius: "12px",
+        padding: "20px",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
-        alignItems: "center",
-        height: "100%"
+        alignItems: "center"
     }}
 >
 
