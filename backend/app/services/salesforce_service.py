@@ -418,6 +418,71 @@ def delete_discovery_candidate(candidate_id: str):
         "message": "Discovery Candidate deleted successfully"
     }
 
+def convert_discovery_candidate_to_lead(candidate_id: str):
+    detail_url = (
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/Discovery_Candidate__c/{candidate_id}"
+    )
+
+    response = sf_request(
+        "GET",
+        detail_url,
+        params={
+            "fields": (
+                "Name,Candidate_Name__c,Business_Name__c,Phone__c,"
+                "Related_Lead__c,Review_Status__c"
+            )
+        }
+    )
+
+    candidate = response.json()
+
+    if candidate.get("Related_Lead__c"):
+        raise HTTPException(
+            status_code=409,
+            detail="This candidate has already been converted to a Lead"
+        )
+
+    if candidate.get("Review_Status__c") != "Approved":
+        raise HTTPException(
+            status_code=400,
+            detail="Only approved candidates can be converted to a Lead"
+        )
+
+    lead_name = (
+        candidate.get("Candidate_Name__c")
+        or candidate.get("Name")
+        or "Unknown"
+    )
+
+    lead_payload = {
+        "LastName": lead_name,
+        "Company": candidate.get("Business_Name__c") or lead_name,
+        "Phone": candidate.get("Phone__c")
+    }
+
+    lead_url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead"
+
+    lead_response = sf_request(
+        "POST",
+        lead_url,
+        json={k: v for k, v in lead_payload.items() if v is not None}
+    )
+
+    lead_id = lead_response.json()["id"]
+
+    sf_request(
+        "PATCH",
+        detail_url,
+        json={
+            "Related_Lead__c": lead_id
+        }
+    )
+
+    return {
+        "message": "Discovery Candidate converted to Lead successfully",
+        "lead_id": lead_id
+    }
+
 
 def get_territory_assignments():
     query = """

@@ -479,3 +479,84 @@ export async function getGISFieldVisits() {
     }
 
 }
+
+export async function getDiscoveryCandidates() {
+
+    try {
+
+        const response = await authFetch(
+            `${BASE_URL}/salesforce/discovery-candidates`
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `Discovery Candidates API failed: ${response.status}`
+            );
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error(
+            "Discovery Candidates API Error:",
+            error
+        );
+
+        return [];
+
+    }
+
+}
+
+export async function updateDiscoveryCandidate(candidateId, data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/discovery-candidates/${candidateId}`,
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to update discovery candidate"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function convertDiscoveryCandidateToLead(candidateId) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/discovery-candidates/${candidateId}/convert-to-lead`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to convert candidate to lead"
+        );
+
+    }
+
+    return await response.json();
+}

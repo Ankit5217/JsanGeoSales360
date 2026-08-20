@@ -149,6 +149,20 @@ export default function ModuleRenderer({
             break;
 
 
+        case "opportunities":
+
+            ModuleComponent = Opportunities;
+
+            break;
+
+
+        case "discovery":
+
+            ModuleComponent = Discovery;
+
+            break;
+
+
         case "territories":
 
         ModuleComponent = Territories;
