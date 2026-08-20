@@ -1,11 +1,13 @@
 import logging
 import os
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.realtime import connected_clients
 
+from app.auth import get_current_user
+from app.routers.auth_router import router as auth_router
 from app.routers.salesforce_router import router as salesforce_router
 from app.realtime import connect_client, disconnect_client
 
@@ -15,6 +17,18 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+if not os.getenv("JWT_SECRET_KEY"):
+    logger.warning(
+        "JWT_SECRET_KEY is not set — login and all Salesforce endpoints "
+        "will fail until it's configured."
+    )
+
+if not os.getenv("APP_USERS"):
+    logger.warning(
+        "APP_USERS is not set — no one will be able to log in until it's "
+        "configured. See backend/.env.example."
+    )
 
 
 # ============================================================
@@ -50,7 +64,11 @@ app.add_middleware(
 # ROUTERS
 # ============================================================
 
-app.include_router(salesforce_router)
+app.include_router(auth_router)
+app.include_router(
+    salesforce_router,
+    dependencies=[Depends(get_current_user)]
+)
 
 
 # ============================================================

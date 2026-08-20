@@ -1,4 +1,4 @@
-import { API_BASE_URL as API_BASE } from "../config/apiBase";
+import { API_BASE_URL as API_BASE, authFetch } from "../config/apiBase";
 
 
 // =====================================
@@ -7,7 +7,7 @@ import { API_BASE_URL as API_BASE } from "../config/apiBase";
 
 export async function getUsers() {
 
-    const response = await fetch(
+    const response = await authFetch(
         `${API_BASE}/salesforce/users`
     );
 
@@ -32,7 +32,7 @@ export async function getUsers() {
 
 export async function updateUserRole(userId, role) {
 
-    const response = await fetch(
+    const response = await authFetch(
         `${API_BASE}/salesforce/users/${userId}/role`,
         {
             method: "PUT",

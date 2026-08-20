@@ -1,9 +1,9 @@
-import { API_BASE_URL as BASE_URL } from "../config/apiBase";
+import { API_BASE_URL as BASE_URL, authFetch } from "../config/apiBase";
 export async function getAccounts() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/accounts`
         );
 
@@ -25,7 +25,7 @@ export async function getAccounts() {
 
 export async function updateAccount(accountId, data) {
 
-    const response = await fetch(
+    const response = await authFetch(
 
         `${BASE_URL}/salesforce/accounts/${accountId}`,
 
@@ -62,7 +62,7 @@ export async function updateAccount(accountId, data) {
 
 export async function updateLead(leadId, data) {
 
-    const response = await fetch(
+    const response = await authFetch(
         `${BASE_URL}/salesforce/leads/${leadId}`,
         {
             method: "PUT",
@@ -93,7 +93,7 @@ export async function getLeads() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/leads`
         );
 
@@ -124,7 +124,7 @@ export async function getTerritories() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/territories`
         );
 
@@ -155,7 +155,7 @@ export async function getRoutes() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/routes`
         );
 
@@ -200,7 +200,7 @@ export async function getFieldVisits() {
 
 
         const response =
-            await fetch(url);
+            await authFetch(url);
 
 
         console.log(
@@ -257,7 +257,7 @@ export async function getEvidence() {
     try {
         console.log("=== EVIDENCE API CALL START ===");
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/evidence`
         );
 
@@ -305,7 +305,7 @@ export async function getGISAccounts() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/accounts`
         );
 
@@ -335,7 +335,7 @@ export async function getGISLeads() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/leads`
         );
 
@@ -365,7 +365,7 @@ export async function getGISDiscovery() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/discovery`
         );
 
@@ -395,7 +395,7 @@ export async function getGISTerritories() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/territories`
         );
 
@@ -425,7 +425,7 @@ export async function getGISRoutes() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/routes`
         );
 
@@ -455,7 +455,7 @@ export async function getGISFieldVisits() {
 
     try {
 
-        const response = await fetch(
+        const response = await authFetch(
             `${BASE_URL}/salesforce/gis/field-visits`
         );
 

@@ -1,92 +1,33 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { getUsers } from "../services/usersApi";
+import { createContext, useContext } from "react";
+import { useAuth } from "./AuthContext";
 import { hasPermission } from "../config/permissions";
 
 const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
 
-    const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-
-        async function loadCurrentUser() {
-
-            try {
-
-                const users = await getUsers();
-
-                console.log("Users loaded for permissions:", users);
-
-                /*
-                 * TEMPORARY:
-                 * Until we connect Salesforce login/session
-                 * to the React application, use the first
-                 * Salesforce user for testing.
-                 */
- if (users && users.length > 0) {
-
-    console.log("Selected test user:", users[0]);
-
-    console.log(
-        "Selected GeoSales Role:",
-        users[0]?.geoSalesRole
-    );
-
-    const selectedUser = users[0];
-
-console.log("Selected test user:", selectedUser);
-
-setCurrentUser({
-    ...selectedUser,
-    geoSalesRole: selectedUser.GeoSales_Role__c
-});
-
-}
-
-            } catch (error) {
-
-                console.error(
-                    "Failed to load current user:",
-                    error
-                );
-
-            } finally {
-
-                setLoading(false);
-
-            }
-
-        }
-
-        loadCurrentUser();
-
-    }, []);
-
+    const { username, role } = useAuth();
 
     function checkPermission(permission) {
 
-        if (!currentUser) {
+        if (!role) {
             return false;
         }
 
-        return hasPermission(
-            currentUser.geoSalesRole,
-            permission
-        );
+        return hasPermission(role, permission);
 
     }
 
 
     const value = {
 
-        currentUser,
+        currentUser: username
+            ? { username, geoSalesRole: role }
+            : null,
 
-        role:
-            currentUser?.geoSalesRole || null,
+        role,
 
-        loading,
+        loading: false,
 
         hasPermission: checkPermission
 
