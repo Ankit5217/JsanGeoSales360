@@ -267,8 +267,14 @@ def create_lead(lead: LeadCreate):
 
     return response.json()
 
+# Every Opportunity seeded into this org by Salesforce's demo data is
+# owned by this user ("OrgFarm EPIC"). Same pattern as SAMPLE_LEAD_IDS -
+# excluding it is how "only the ones I made" gets enforced, and it stays
+# correct for any future real owner without needing an allow-list.
+SAMPLE_OPPORTUNITY_OWNER_ID = "005gL00000LeYgQQAV"
+
 def get_opportunities():
-    query = """
+    query = f"""
     SELECT
         Id,
         Name,
@@ -282,6 +288,7 @@ def get_opportunities():
         Account.Name,
         Owner.Name
     FROM Opportunity
+    WHERE OwnerId != '{SAMPLE_OPPORTUNITY_OWNER_ID}'
     """
 
     url = (
@@ -319,7 +326,7 @@ def get_opportunities():
     return opportunities
 
 def get_opportunities_map():
-    query = """
+    query = f"""
     SELECT
         Id,
         Name,
@@ -335,6 +342,7 @@ def get_opportunities_map():
     FROM Opportunity
     WHERE Account.Location__Latitude__s != NULL
     AND Account.Location__Longitude__s != NULL
+    AND OwnerId != '{SAMPLE_OPPORTUNITY_OWNER_ID}'
     """
 
     url = (
