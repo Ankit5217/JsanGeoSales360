@@ -2,8 +2,18 @@ import { useEffect, useState } from "react";
 import {
     getDiscoveryCandidates,
     updateDiscoveryCandidate,
-    convertDiscoveryCandidateToLead
+    convertDiscoveryCandidateToLead,
+    createDiscoveryCandidate
 } from "../../services/salesforceApi";
+
+const DISCOVERY_SOURCES = [
+    "Sales Representative",
+    "Manual Survey",
+    "Google Maps",
+    "OpenStreetMap",
+    "Partner Referral",
+    "Import"
+];
 
 const VALIDATION_COLORS = {
     Validated: { bg: "#e8f5e9", color: "#2e7d32" },
@@ -59,6 +69,17 @@ export default function Discovery() {
     const [error, setError] = useState("");
     const [busyId, setBusyId] = useState(null);
     const [rowErrors, setRowErrors] = useState({});
+
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({
+        name: "",
+        business: "",
+        address: "",
+        phone: "",
+        source: DISCOVERY_SOURCES[0]
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
 
 
     useEffect(() => {
@@ -169,6 +190,61 @@ export default function Discovery() {
     }
 
 
+    function updateFormField(field, value) {
+
+        setFormValues(prev => ({ ...prev, [field]: value }));
+
+    }
+
+
+    async function handleLogDiscovery(e) {
+
+        e.preventDefault();
+
+        if (!formValues.name.trim()) {
+            setFormError("Name is required.");
+            return;
+        }
+
+        setFormSubmitting(true);
+        setFormError("");
+
+        try {
+
+            await createDiscoveryCandidate({
+                Name: formValues.name.trim(),
+                Candidate_Name__c: formValues.name.trim(),
+                Business_Name__c: formValues.business.trim() || null,
+                Address__c: formValues.address.trim() || null,
+                Phone__c: formValues.phone.trim() || null,
+                Discovery_Source__c: formValues.source
+            });
+
+            setFormValues({
+                name: "",
+                business: "",
+                address: "",
+                phone: "",
+                source: DISCOVERY_SOURCES[0]
+            });
+
+            setShowForm(false);
+
+            await loadCandidates();
+
+        } catch (err) {
+
+            setFormError(err.message || "Failed to log new discovery.");
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
+
+
     if (loading) {
 
         return (
@@ -207,12 +283,138 @@ export default function Discovery() {
     return (
         <div style={{ padding: "25px", background: "#f4f6f9", minHeight: "100vh" }}>
 
-            <div style={{ marginBottom: "20px" }}>
-                <h2 style={{ margin: 0, color: "#0B2E4F" }}>Discovery</h2>
-                <p style={{ marginTop: "6px", color: "#666" }}>
-                    Prospective new accounts and leads awaiting review
-                </p>
+            <div
+                style={{
+                    marginBottom: "20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
+                }}
+            >
+                <div>
+                    <h2 style={{ margin: 0, color: "#0B2E4F" }}>Discovery</h2>
+                    <p style={{ marginTop: "6px", color: "#666" }}>
+                        Prospective new accounts and leads awaiting review
+                    </p>
+                </div>
+
+                <button
+                    onClick={() => setShowForm(prev => !prev)}
+                    style={{
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
+                    }}
+                >
+                    {showForm ? "Cancel" : "+ Log New Discovery"}
+                </button>
             </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleLogDiscovery}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginBottom: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    <div>
+                        <label style={fieldLabelStyle}>Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.name}
+                            onChange={e => updateFormField("name", e.target.value)}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Business</label>
+                        <input
+                            type="text"
+                            value={formValues.business}
+                            onChange={e => updateFormField("business", e.target.value)}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Address</label>
+                        <input
+                            type="text"
+                            value={formValues.address}
+                            onChange={e => updateFormField("address", e.target.value)}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Phone</label>
+                        <input
+                            type="text"
+                            value={formValues.phone}
+                            onChange={e => updateFormField("phone", e.target.value)}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Source</label>
+                        <select
+                            value={formValues.source}
+                            onChange={e => updateFormField("source", e.target.value)}
+                            style={fieldInputStyle}
+                        >
+                            {DISCOVERY_SOURCES.map(source => (
+                                <option key={source} value={source}>{source}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
             <div
                 style={{
@@ -401,3 +603,21 @@ function actionButtonStyle(color, disabled) {
     };
 
 }
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
+};

@@ -480,6 +480,35 @@ export async function getGISFieldVisits() {
 
 }
 
+export async function createDiscoveryCandidate(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/discovery-candidates`,
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to log new discovery"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function getDiscoveryCandidates() {
 
     try {
