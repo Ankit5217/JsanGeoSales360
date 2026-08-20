@@ -800,3 +800,78 @@ export async function createEvidence(data) {
 
     return await response.json();
 }
+
+export async function getOpportunities() {
+
+    try {
+
+        const response = await authFetch(
+            `${BASE_URL}/salesforce/opportunities`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch opportunities");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error("Opportunities API Error:", error);
+
+        return [];
+
+    }
+
+}
+
+// GIS-filtered (only opportunities whose linked Account already has a
+// latitude/longitude) - for plotting pins on the GIS Map, not the list.
+export async function getOpportunitiesMap() {
+
+    try {
+
+        const response = await authFetch(
+            `${BASE_URL}/salesforce/gis/opportunities`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch opportunities map data");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error("Opportunities Map API Error:", error);
+
+        return [];
+
+    }
+
+}
+
+export async function createOpportunity(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/opportunities`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create opportunity"
+        );
+
+    }
+
+    return await response.json();
+}

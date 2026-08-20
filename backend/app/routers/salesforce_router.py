@@ -90,6 +90,7 @@ from app.services.salesforce_service import  (
     get_account_location,
     get_accounts_priority,
     get_accounts_validation,
+    get_opportunities_map,
     get_leads_map,
     get_lead_location,
     get_leads_priority, 
@@ -534,6 +535,10 @@ def gis_accounts_priority(priority: str):
 @router.get("/gis/accounts/validation/{status}")
 def gis_accounts_validation(status: str):
     return get_accounts_validation(status)
+
+@router.get("/gis/opportunities")
+def gis_opportunities():
+    return get_opportunities_map()
 
 @router.get("/gis/leads")
 def gis_leads():

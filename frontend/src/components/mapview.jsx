@@ -4,7 +4,7 @@ import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
-import {getAccounts,updateAccount,getLeads,updateLead
+import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap
 } from "../services/salesforceApi";
 import {
     PieChart,
@@ -203,6 +203,7 @@ console.log(
   const [liveAlerts, setLiveAlerts] = useState([]);
   const [liveActivityFeed, setLiveActivityFeed] = useState([]);
   const [leadRecords, setLeadRecords] = useState([]);
+  const [opportunityRecords, setOpportunityRecords] = useState([]);
       async function loadAccounts() {
 
         try {
@@ -321,12 +322,73 @@ console.log(
     }
 
 }
+
+async function loadOpportunities() {
+
+    try {
+
+        const opportunities = await getOpportunitiesMap();
+
+        const formattedOpportunities = opportunities
+            .map(opp => {
+                const account = opp.Account || {};
+
+                return {
+                    id: opp.Id,
+                    name: opp.Name,
+                    type: "opportunity",
+
+                    territory: account.Territory_ID__c || "Unassigned",
+
+                    lat: account.Location__Latitude__s,
+                    lng: account.Location__Longitude__s,
+
+                    priority: "Medium",
+
+                    owner: opp.Owner?.Name || "Not Assigned",
+
+                    oppValue: opp.Amount || 0,
+
+                    stage: opp.StageName,
+                    accountName: account.Name || "-",
+
+                    discoverySource: "-",
+
+                    validation: account.GIS_Validation_Status__c || "Validated",
+
+                    // Opportunities aren't field-visit targets - default to
+                    // "completed" so the check-in/out panel never renders
+                    // for one (that flow belongs to Accounts/Leads).
+                    lastVisit: "-",
+                    nextVisit: "-",
+                    visitStatus: "completed"
+                };
+            })
+            .filter(opp =>
+                opp.lat != null &&
+                opp.lng != null
+            );
+
+        setOpportunityRecords(formattedOpportunities);
+
+    } catch (error) {
+
+        console.error(
+            "Opportunity Loading Error:",
+            error
+        );
+
+    }
+
+}
+
 useEffect(() => {
-    
+
         loadAccounts();
         loadLeads();
-        
-}, []);  
+        loadOpportunities();
+
+}, []);
 
   const [typeFilter, setTypeFilter] = useState('');
   const [territoryFilter, setTerritoryFilter] = useState('');
@@ -337,7 +399,7 @@ useEffect(() => {
   const [routeTerritory, setRouteTerritory] = useState('');
 const territoryOptions = [
     ...new Set(
-        [...records, ...leadRecords]
+        [...records, ...leadRecords, ...opportunityRecords]
             .map(r => r.territory)
             .filter(Boolean)
     )
@@ -345,7 +407,7 @@ const territoryOptions = [
   const [priorityFilter, setPriorityFilter] = useState('');
   const [searchText, setSearchText] = useState("");
 
-  const selected = [...records, ...leadRecords]
+  const selected = [...records, ...leadRecords, ...opportunityRecords]
     .find(r => r.id === selectedId) || null;
 console.log(
     "🔴 GIS LEAD DETAILS:",
@@ -388,7 +450,8 @@ const filtered = records.filter(
 );
 const mapRecords = [
     ...records,
-    ...leadRecords
+    ...leadRecords,
+    ...opportunityRecords
 ];
 
 console.log(
@@ -4492,6 +4555,7 @@ t.aiScore>=80
     <option value="">All Records</option>
     <option value="customer">Accounts</option>
     <option value="lead">Leads</option>
+    <option value="opportunity">Opportunities</option>
 </select>
         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', marginBottom: '18px' }}>
           <input type="checkbox" checked={showTerritories} onChange={e => setShowTerritories(e.target.checked)} />
@@ -4756,16 +4820,20 @@ t.aiScore>=80
                     Number(r.lat),
                     Number(r.lng)
                 ]}
-                radius={r.type === "lead" ? 10 : 8}
+                radius={r.type === "lead" ? 10 : r.type === "opportunity" ? 9 : 8}
                 pathOptions={{
                     color:
                         r.type === "lead"
                             ? "#7B1FA2"
+                            : r.type === "opportunity"
+                            ? "#1565C0"
                             : PRIORITY_COLOR[r.priority] || "#0B2E4F",
 
                     fillColor:
                         r.type === "lead"
                             ? "#9C27B0"
+                            : r.type === "opportunity"
+                            ? "#1E88E5"
                             : PRIORITY_COLOR[r.priority] || "#0B2E4F",
 
                     fillOpacity: 0.9,
@@ -4790,6 +4858,8 @@ t.aiScore>=80
                         {" "}
                         {r.type === "lead"
                             ? "Lead"
+                            : r.type === "opportunity"
+                            ? "Opportunity"
                             : "Account"}
 
                         <br />
@@ -4804,17 +4874,35 @@ t.aiScore>=80
                         {" "}
                         {r.owner}
 
-                        <br />
+                        {r.type === "opportunity" ? (
+                            <>
+                                <br />
 
-                        Priority:
-                        {" "}
-                        {r.priority}
+                                Stage:
+                                {" "}
+                                {r.stage}
 
-                        <br />
+                                <br />
 
-                        Validation:
-                        {" "}
-                        {r.validation}
+                                Account:
+                                {" "}
+                                {r.accountName}
+                            </>
+                        ) : (
+                            <>
+                                <br />
+
+                                Priority:
+                                {" "}
+                                {r.priority}
+
+                                <br />
+
+                                Validation:
+                                {" "}
+                                {r.validation}
+                            </>
+                        )}
 
                     </div>
 
@@ -4887,7 +4975,12 @@ style={{
               <div style={{ fontSize: '11px', color: '#666', marginBottom: '14px' }}>
                 {selected.id} · {TERRITORIES.find(t => t.id === selected.territory)?.name} Territory
               </div>
-              {[
+              {(selected.type === "opportunity" ? [
+                ['Account', selected.accountName],
+                ['Stage', selected.stage],
+                ['Owner', selected.owner],
+                ['Opportunity Value', selected.oppValue ? `₹${selected.oppValue.toLocaleString('en-IN')}` : '—'],
+              ] : [
                 ['Owner', selected.owner],
                 ['Priority', selected.priority],
                 ['Opportunity Value', selected.oppValue ? `₹${selected.oppValue.toLocaleString('en-IN')}` : '—'],
@@ -4895,13 +4988,14 @@ style={{
                 ['Validation Status', selected.validation],
                 ['Last Visit', selected.lastVisit],
                 ['Next Visit', selected.nextVisit],
-              ].map(([k, v]) => (
+              ]).map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #eee', fontSize: '12px' }}>
                   <span style={{ color: '#666' }}>{k}</span>
                   <strong>{v}</strong>
                 </div>
               ))}
 
+              {selected.type !== "opportunity" && (
               <div style={{ marginTop: '14px', padding: '10px', background: '#f6f8fb', borderRadius: '7px', fontSize: '12px' }}>
                 <div style={{ fontWeight: 700, marginBottom: '6px' }}>Field Visit</div>
                 <div>Status: <strong>{selected.visitStatus}</strong></div>
@@ -4931,6 +5025,7 @@ style={{
                   </div>
                 )}
               </div>
+              )}
             </>
           )}
         </div>

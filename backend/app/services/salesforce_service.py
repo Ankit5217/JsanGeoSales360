@@ -274,7 +274,13 @@ def get_opportunities():
         Name,
         StageName,
         Amount,
-        CloseDate
+        Probability,
+        CloseDate,
+        Type,
+        LeadSource,
+        AccountId,
+        Account.Name,
+        Owner.Name
     FROM Opportunity
     """
 
@@ -293,15 +299,54 @@ def get_opportunities():
     opportunities = []
 
     for record in data["records"]:
+        account = record.get("Account") or {}
+        owner = record.get("Owner") or {}
+
         opportunities.append({
             "id": record.get("Id"),
             "name": record.get("Name"),
             "stage": record.get("StageName"),
             "amount": record.get("Amount"),
-            "close_date": record.get("CloseDate")
+            "probability": record.get("Probability"),
+            "close_date": record.get("CloseDate"),
+            "type": record.get("Type"),
+            "lead_source": record.get("LeadSource"),
+            "account_id": record.get("AccountId"),
+            "account_name": account.get("Name"),
+            "owner_name": owner.get("Name")
         })
 
     return opportunities
+
+def get_opportunities_map():
+    query = """
+    SELECT
+        Id,
+        Name,
+        StageName,
+        Amount,
+        AccountId,
+        Account.Name,
+        Account.Territory_ID__c,
+        Account.GIS_Validation_Status__c,
+        Account.Location__Latitude__s,
+        Account.Location__Longitude__s,
+        Owner.Name
+    FROM Opportunity
+    WHERE Account.Location__Latitude__s != NULL
+    AND Account.Location__Longitude__s != NULL
+    """
+
+    url = (
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(query)}"
+    )
+
+    response = sf_request(
+        "GET",
+        url
+    )
+
+    return response.json()["records"]
 
 def create_opportunity(opportunity: OpportunityCreate):
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Opportunity"

@@ -7,6 +7,7 @@ class OpportunityCreate(BaseModel):
     StageName: str
     CloseDate: date
     Amount: float | None = None
+    AccountId: str | None = None
 
 
 class OpportunityUpdate(BaseModel):
@@ -14,3 +15,4 @@ class OpportunityUpdate(BaseModel):
     StageName: str | None = None
     CloseDate: date | None = None
     Amount: float | None = None
+    AccountId: str | None = None
