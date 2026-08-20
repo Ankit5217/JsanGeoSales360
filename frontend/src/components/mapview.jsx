@@ -4483,12 +4483,12 @@ t.aiScore>=80
 >
         <h3 style={{ marginTop: 0 }}>Filters</h3>
         <label style={{ fontSize: "12px", fontWeight: 600 }}>
-    Search Account / Lead
+    Search Account / Lead / Opportunity
 </label>
 
 <input
     type="text"
-    placeholder="Search account or lead..."
+    placeholder="Search account, lead, or opportunity..."
     value={searchText}
     onChange={(e) => setSearchText(e.target.value)}
     style={{
