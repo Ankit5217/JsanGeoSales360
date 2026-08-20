@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { getRoutes } from "../../services/salesforceApi";
+import { getRoutes, createRoute } from "../../services/salesforceApi";
+
+const ROUTE_STATUSES = ["Pending", "Approved", "Rejected"];
 
 export default function Routes() {
 
@@ -7,10 +9,25 @@ export default function Routes() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({
+        routeName: "",
+        routeDate: "",
+        estimatedTime: "",
+        totalDistance: "",
+        status: ROUTE_STATUSES[0]
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
+
 
     useEffect(() => {
 
-        async function loadRoutes() {
+        loadRoutes();
+
+    }, []);
+
+    async function loadRoutes() {
 
             console.log(
                 "=== ROUTES: START API CALL ==="
@@ -68,12 +85,53 @@ export default function Routes() {
 
             }
 
+    }
+
+    async function handleCreate(e) {
+
+        e.preventDefault();
+
+        if (!formValues.routeName.trim() || !formValues.routeDate) {
+            setFormError("Route name and date are required.");
+            return;
         }
 
+        setFormSubmitting(true);
+        setFormError("");
 
-        loadRoutes();
+        try {
 
-    }, []);
+            await createRoute({
+                Route_Name__c: formValues.routeName.trim(),
+                Route_Date__c: formValues.routeDate,
+                Estimated_Time__c: formValues.estimatedTime !== "" ? Number(formValues.estimatedTime) : null,
+                Total_Distance__c: formValues.totalDistance !== "" ? Number(formValues.totalDistance) : null,
+                Status__c: formValues.status
+            });
+
+            setFormValues({
+                routeName: "",
+                routeDate: "",
+                estimatedTime: "",
+                totalDistance: "",
+                status: ROUTE_STATUSES[0]
+            });
+
+            setShowForm(false);
+
+            await loadRoutes();
+
+        } catch (err) {
+
+            setFormError(err.message || "Failed to create route.");
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
 
 
     /*
@@ -182,29 +240,156 @@ export default function Routes() {
 
             <div
                 style={{
-                    marginBottom: "20px"
+                    marginBottom: "20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
                 }}
             >
 
-                <h2
-                    style={{
-                        margin: 0,
-                        color: "#0B2E4F"
-                    }}
-                >
-                    Routes
-                </h2>
+                <div>
 
-                <p
+                    <h2
+                        style={{
+                            margin: 0,
+                            color: "#0B2E4F"
+                        }}
+                    >
+                        Routes
+                    </h2>
+
+                    <p
+                        style={{
+                            marginTop: "6px",
+                            color: "#666"
+                        }}
+                    >
+                        Salesforce route plans
+                    </p>
+
+                </div>
+
+                <button
+                    onClick={() => setShowForm(prev => !prev)}
                     style={{
-                        marginTop: "6px",
-                        color: "#666"
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
                     }}
                 >
-                    Salesforce route plans
-                </p>
+                    {showForm ? "Cancel" : "+ Log New Route"}
+                </button>
 
             </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleCreate}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginBottom: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    <div>
+                        <label style={fieldLabelStyle}>Route Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.routeName}
+                            onChange={e => setFormValues(prev => ({ ...prev, routeName: e.target.value }))}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Route Date *</label>
+                        <input
+                            type="date"
+                            value={formValues.routeDate}
+                            onChange={e => setFormValues(prev => ({ ...prev, routeDate: e.target.value }))}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Estimated Time (min)</label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={formValues.estimatedTime}
+                            onChange={e => setFormValues(prev => ({ ...prev, estimatedTime: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Total Distance</label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={formValues.totalDistance}
+                            onChange={e => setFormValues(prev => ({ ...prev, totalDistance: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Status</label>
+                        <select
+                            value={formValues.status}
+                            onChange={e => setFormValues(prev => ({ ...prev, status: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            {ROUTE_STATUSES.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
 
             {/* SUMMARY */}
@@ -531,3 +716,21 @@ export default function Routes() {
     );
 
 }
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
+};

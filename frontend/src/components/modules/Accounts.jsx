@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
-import { getAccounts } from "../../services/salesforceApi";
+import { getAllAccounts, createAccount } from "../../services/salesforceApi";
+
+const ACCOUNT_TYPES = [
+    "Prospect",
+    "Customer - Direct",
+    "Customer - Channel",
+    "Channel Partner / Reseller",
+    "Installation Partner",
+    "Technology Partner",
+    "Other"
+];
 
 export default function Accounts() {
 
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({
+        name: "",
+        phone: "",
+        type: ACCOUNT_TYPES[0],
+        billingCity: ""
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
 
     /*
      * Common table cell styling
@@ -22,7 +42,11 @@ export default function Accounts() {
      */
     useEffect(() => {
 
-        async function loadAccounts() {
+        loadAccounts();
+
+    }, []);
+
+    async function loadAccounts() {
 
             console.log("=== ACCOUNTS: START API CALL ===");
 
@@ -31,7 +55,7 @@ export default function Accounts() {
                 setLoading(true);
                 setError("");
 
-                const data = await getAccounts();
+                const data = await getAllAccounts();
 
                 console.log(
                     "=== ACCOUNTS: API RESPONSE ==="
@@ -103,11 +127,51 @@ export default function Accounts() {
 
             }
 
+    }
+
+    async function handleCreate(e) {
+
+        e.preventDefault();
+
+        if (!formValues.name.trim()) {
+            setFormError("Name is required.");
+            return;
         }
 
-        loadAccounts();
+        setFormSubmitting(true);
+        setFormError("");
 
-    }, []);
+        try {
+
+            await createAccount({
+                Name: formValues.name.trim(),
+                Phone: formValues.phone.trim() || null,
+                Type: formValues.type,
+                BillingCity: formValues.billingCity.trim() || null
+            });
+
+            setFormValues({
+                name: "",
+                phone: "",
+                type: ACCOUNT_TYPES[0],
+                billingCity: ""
+            });
+
+            setShowForm(false);
+
+            await loadAccounts();
+
+        } catch (err) {
+
+            setFormError(err.message || "Failed to create account.");
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
 
 
     /*
@@ -211,29 +275,143 @@ export default function Accounts() {
 
             <div
                 style={{
-                    marginBottom: "20px"
+                    marginBottom: "20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
                 }}
             >
 
-                <h2
-                    style={{
-                        margin: 0,
-                        color: "#0B2E4F"
-                    }}
-                >
-                    Accounts
-                </h2>
+                <div>
 
-                <p
+                    <h2
+                        style={{
+                            margin: 0,
+                            color: "#0B2E4F"
+                        }}
+                    >
+                        Accounts
+                    </h2>
+
+                    <p
+                        style={{
+                            marginTop: "6px",
+                            color: "#666"
+                        }}
+                    >
+                        Salesforce customer accounts
+                    </p>
+
+                </div>
+
+                <button
+                    onClick={() => setShowForm(prev => !prev)}
                     style={{
-                        marginTop: "6px",
-                        color: "#666"
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
                     }}
                 >
-                    Salesforce customer accounts
-                </p>
+                    {showForm ? "Cancel" : "+ Log New Account"}
+                </button>
 
             </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleCreate}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginBottom: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    <div>
+                        <label style={fieldLabelStyle}>Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.name}
+                            onChange={e => setFormValues(prev => ({ ...prev, name: e.target.value }))}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Phone</label>
+                        <input
+                            type="text"
+                            value={formValues.phone}
+                            onChange={e => setFormValues(prev => ({ ...prev, phone: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Type</label>
+                        <select
+                            value={formValues.type}
+                            onChange={e => setFormValues(prev => ({ ...prev, type: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            {ACCOUNT_TYPES.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Billing City</label>
+                        <input
+                            type="text"
+                            value={formValues.billingCity}
+                            onChange={e => setFormValues(prev => ({ ...prev, billingCity: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
 
             {/* SUMMARY CARD */}
@@ -528,3 +706,21 @@ export default function Accounts() {
     );
 
 }
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
+};

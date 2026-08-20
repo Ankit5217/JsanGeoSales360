@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { getTerritories } from "../../services/salesforceApi";
+import { getTerritories, createTerritory } from "../../services/salesforceApi";
+
+const TERRITORY_STATUSES = ["Pending", "Approved", "Rejected"];
 
 export default function Territories() {
 
@@ -7,10 +9,25 @@ export default function Territories() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({
+        name: "",
+        territoryName: "",
+        territoryCode: "",
+        coverage: "",
+        status: TERRITORY_STATUSES[0]
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
+
 
     useEffect(() => {
 
-        async function loadTerritories() {
+        loadTerritories();
+
+    }, []);
+
+    async function loadTerritories() {
 
             console.log(
                 "=== TERRITORIES: START API CALL ==="
@@ -69,12 +86,53 @@ export default function Territories() {
 
             }
 
+    }
+
+    async function handleCreate(e) {
+
+        e.preventDefault();
+
+        if (!formValues.name.trim()) {
+            setFormError("Name is required.");
+            return;
         }
 
+        setFormSubmitting(true);
+        setFormError("");
 
-        loadTerritories();
+        try {
 
-    }, []);
+            await createTerritory({
+                Name: formValues.name.trim(),
+                Territory_Name__c: formValues.territoryName.trim() || null,
+                Territory_Code__c: formValues.territoryCode.trim() || null,
+                Coverage_Percentage__c: formValues.coverage !== "" ? Number(formValues.coverage) : null,
+                Status__c: formValues.status
+            });
+
+            setFormValues({
+                name: "",
+                territoryName: "",
+                territoryCode: "",
+                coverage: "",
+                status: TERRITORY_STATUSES[0]
+            });
+
+            setShowForm(false);
+
+            await loadTerritories();
+
+        } catch (err) {
+
+            setFormError(err.message || "Failed to create territory.");
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
 
 
     /*
@@ -179,29 +237,155 @@ export default function Territories() {
 
             <div
                 style={{
-                    marginBottom: "20px"
+                    marginBottom: "20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
                 }}
             >
 
-                <h2
-                    style={{
-                        margin: 0,
-                        color: "#0B2E4F"
-                    }}
-                >
-                    Territories
-                </h2>
+                <div>
 
-                <p
+                    <h2
+                        style={{
+                            margin: 0,
+                            color: "#0B2E4F"
+                        }}
+                    >
+                        Territories
+                    </h2>
+
+                    <p
+                        style={{
+                            marginTop: "6px",
+                            color: "#666"
+                        }}
+                    >
+                        Salesforce territory assignments
+                    </p>
+
+                </div>
+
+                <button
+                    onClick={() => setShowForm(prev => !prev)}
                     style={{
-                        marginTop: "6px",
-                        color: "#666"
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
                     }}
                 >
-                    Salesforce territory assignments
-                </p>
+                    {showForm ? "Cancel" : "+ Log New Territory"}
+                </button>
 
             </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleCreate}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginBottom: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    <div>
+                        <label style={fieldLabelStyle}>Assignment Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.name}
+                            onChange={e => setFormValues(prev => ({ ...prev, name: e.target.value }))}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Territory Name</label>
+                        <input
+                            type="text"
+                            value={formValues.territoryName}
+                            onChange={e => setFormValues(prev => ({ ...prev, territoryName: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Territory Code</label>
+                        <input
+                            type="text"
+                            value={formValues.territoryCode}
+                            onChange={e => setFormValues(prev => ({ ...prev, territoryCode: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Coverage %</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formValues.coverage}
+                            onChange={e => setFormValues(prev => ({ ...prev, coverage: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Status</label>
+                        <select
+                            value={formValues.status}
+                            onChange={e => setFormValues(prev => ({ ...prev, status: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            {TERRITORY_STATUSES.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
 
             {/* SUMMARY CARD */}
@@ -589,3 +773,21 @@ export default function Territories() {
     );
 
 }
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
+};

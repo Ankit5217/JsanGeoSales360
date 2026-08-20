@@ -1,14 +1,47 @@
 import { useEffect, useState } from "react";
-import { getEvidence } from "../../services/salesforceApi";
+import { getEvidence, createEvidence } from "../../services/salesforceApi";
+
+const EVIDENCE_TYPES = [
+    "Photograph",
+    "GPS Verification",
+    "Business Card",
+    "Customer Confirmation",
+    "Address Verification",
+    "Google Maps Verification",
+    "OpenStreetMap Verification",
+    "Sales Representative Verification",
+    "Site Survey",
+    "Document Upload",
+    "Phone Verification",
+    "Other"
+];
+
+const EVIDENCE_STATUSES = ["Pending", "Approved", "Rejected"];
 
 export default function Evidence() {
 
     const [evidence, setEvidence] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({
+        name: "",
+        type: EVIDENCE_TYPES[0],
+        photoUrl: "",
+        validationDate: "",
+        status: EVIDENCE_STATUSES[0],
+        remarks: ""
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
+
     useEffect(() => {
 
-        async function loadEvidence() {
+        loadEvidence();
+
+    }, []);
+
+    async function loadEvidence() {
 
             console.log("=== EVIDENCE: START API CALL ===");
 
@@ -43,11 +76,55 @@ export default function Evidence() {
 
             }
 
+    }
+
+    async function handleCreate(e) {
+
+        e.preventDefault();
+
+        if (!formValues.name.trim()) {
+            setFormError("Name is required.");
+            return;
         }
 
-        loadEvidence();
+        setFormSubmitting(true);
+        setFormError("");
 
-    }, []);
+        try {
+
+            await createEvidence({
+                Name: formValues.name.trim(),
+                Evidence_Type__c: formValues.type,
+                Photo_URL__c: formValues.photoUrl.trim() || null,
+                Validation_Date__c: formValues.validationDate || null,
+                Status__c: formValues.status,
+                Remarks__c: formValues.remarks.trim() || null
+            });
+
+            setFormValues({
+                name: "",
+                type: EVIDENCE_TYPES[0],
+                photoUrl: "",
+                validationDate: "",
+                status: EVIDENCE_STATUSES[0],
+                remarks: ""
+            });
+
+            setShowForm(false);
+
+            await loadEvidence();
+
+        } catch (err) {
+
+            setFormError(err.message || "Failed to create evidence.");
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
 
 
     if (loading) {
@@ -71,18 +148,162 @@ export default function Evidence() {
             }}
         >
 
-            <h1
+            <div
                 style={{
-                    color: "#0B2E4F",
-                    marginBottom: "9px"
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
                 }}
             >
-                Evidence
-            </h1>
 
-            <p style={{ color: "#666" }}>
-                Validation evidence and field inspection records
-            </p>
+                <div>
+
+                    <h1
+                        style={{
+                            color: "#0B2E4F",
+                            marginBottom: "9px"
+                        }}
+                    >
+                        Evidence
+                    </h1>
+
+                    <p style={{ color: "#666" }}>
+                        Validation evidence and field inspection records
+                    </p>
+
+                </div>
+
+                <button
+                    onClick={() => setShowForm(prev => !prev)}
+                    style={{
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
+                    }}
+                >
+                    {showForm ? "Cancel" : "+ Log New Evidence"}
+                </button>
+
+            </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleCreate}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginTop: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    <div>
+                        <label style={fieldLabelStyle}>Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.name}
+                            onChange={e => setFormValues(prev => ({ ...prev, name: e.target.value }))}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Type</label>
+                        <select
+                            value={formValues.type}
+                            onChange={e => setFormValues(prev => ({ ...prev, type: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            {EVIDENCE_TYPES.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Photo URL</label>
+                        <input
+                            type="text"
+                            value={formValues.photoUrl}
+                            onChange={e => setFormValues(prev => ({ ...prev, photoUrl: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Validation Date</label>
+                        <input
+                            type="date"
+                            value={formValues.validationDate}
+                            onChange={e => setFormValues(prev => ({ ...prev, validationDate: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Status</label>
+                        <select
+                            value={formValues.status}
+                            onChange={e => setFormValues(prev => ({ ...prev, status: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            {EVIDENCE_STATUSES.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ gridColumn: "span 2" }}>
+                        <label style={fieldLabelStyle}>Remarks</label>
+                        <input
+                            type="text"
+                            value={formValues.remarks}
+                            onChange={e => setFormValues(prev => ({ ...prev, remarks: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
 
             {/* SUMMARY */}
@@ -517,4 +738,22 @@ const tdStyle = {
 
     fontSize: "13px"
 
+};
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
 };

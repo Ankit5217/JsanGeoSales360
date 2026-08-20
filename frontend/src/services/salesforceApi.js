@@ -624,3 +624,156 @@ export async function convertDiscoveryCandidateToLead(candidateId) {
 
     return await response.json();
 }
+
+// Unlike getAccounts() (GIS-filtered - only accounts that already have
+// a latitude/longitude, correct for the map, wrong for a plain list),
+// this returns every account regardless of whether it's been
+// geolocated yet. Same fix as getAllLeads().
+export async function getAllAccounts() {
+
+    try {
+
+        const response = await authFetch(
+            `${BASE_URL}/salesforce/accounts/all`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch accounts");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error("Accounts API Error:", error);
+
+        return [];
+
+    }
+
+}
+
+export async function createAccount(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/accounts`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create account"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function createTerritory(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/territories`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create territory"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function createRoute(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/routes`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create route"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function createFieldVisit(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/visits`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create field visit"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function createEvidence(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/evidence`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create evidence"
+        );
+
+    }
+
+    return await response.json();
+}

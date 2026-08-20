@@ -1,5 +1,20 @@
 import { useEffect, useState } from "react";
-import { getFieldVisits } from "../../services/salesforceApi";
+import { getFieldVisits, createFieldVisit } from "../../services/salesforceApi";
+
+const VISIT_OUTCOMES = [
+    "Successful Meeting",
+    "Customer Interested",
+    "Follow-up Required",
+    "Opportunity Created",
+    "Lead Qualified",
+    "Lead Rejected",
+    "Customer Not Available",
+    "Visit Rescheduled",
+    "Incorrect Location",
+    "Duplicate Business",
+    "Closed Permanently",
+    "No Response"
+];
 
 export default function FieldVisits() {
 
@@ -7,10 +22,24 @@ export default function FieldVisits() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const [showForm, setShowForm] = useState(false);
+    const [formValues, setFormValues] = useState({
+        name: "",
+        visitDate: "",
+        outcome: VISIT_OUTCOMES[0],
+        notes: ""
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
+
 
     useEffect(() => {
 
-        async function loadFieldVisits() {
+        loadFieldVisits();
+
+    }, []);
+
+    async function loadFieldVisits() {
 
             console.log(
                 "=== FIELD VISITS: START API CALL ==="
@@ -69,12 +98,51 @@ export default function FieldVisits() {
 
             }
 
+    }
+
+    async function handleCreate(e) {
+
+        e.preventDefault();
+
+        if (!formValues.name.trim()) {
+            setFormError("Name is required.");
+            return;
         }
 
+        setFormSubmitting(true);
+        setFormError("");
 
-        loadFieldVisits();
+        try {
 
-    }, []);
+            await createFieldVisit({
+                Name: formValues.name.trim(),
+                Visit_Date__c: formValues.visitDate || null,
+                Visit_Outcome__c: formValues.outcome,
+                Notes__c: formValues.notes.trim() || null
+            });
+
+            setFormValues({
+                name: "",
+                visitDate: "",
+                outcome: VISIT_OUTCOMES[0],
+                notes: ""
+            });
+
+            setShowForm(false);
+
+            await loadFieldVisits();
+
+        } catch (err) {
+
+            setFormError(err.message || "Failed to create field visit.");
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
 
 
     /*
@@ -204,29 +272,143 @@ function formatVisitDate(dateValue) {
 
             <div
                 style={{
-                    marginBottom: "20px"
+                    marginBottom: "20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
                 }}
             >
 
-                <h2
-                    style={{
-                        margin: 0,
-                        color: "#0B2E4F"
-                    }}
-                >
-                    Field Visits
-                </h2>
+                <div>
 
-                <p
+                    <h2
+                        style={{
+                            margin: 0,
+                            color: "#0B2E4F"
+                        }}
+                    >
+                        Field Visits
+                    </h2>
+
+                    <p
+                        style={{
+                            marginTop: "6px",
+                            color: "#666"
+                        }}
+                    >
+                        Salesforce field visit records
+                    </p>
+
+                </div>
+
+                <button
+                    onClick={() => setShowForm(prev => !prev)}
                     style={{
-                        marginTop: "6px",
-                        color: "#666"
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
                     }}
                 >
-                    Salesforce field visit records
-                </p>
+                    {showForm ? "Cancel" : "+ Log New Field Visit"}
+                </button>
 
             </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleCreate}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginBottom: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    <div>
+                        <label style={fieldLabelStyle}>Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.name}
+                            onChange={e => setFormValues(prev => ({ ...prev, name: e.target.value }))}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Visit Date</label>
+                        <input
+                            type="datetime-local"
+                            value={formValues.visitDate}
+                            onChange={e => setFormValues(prev => ({ ...prev, visitDate: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Outcome</label>
+                        <select
+                            value={formValues.outcome}
+                            onChange={e => setFormValues(prev => ({ ...prev, outcome: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            {VISIT_OUTCOMES.map(outcome => (
+                                <option key={outcome} value={outcome}>{outcome}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ gridColumn: "span 2" }}>
+                        <label style={fieldLabelStyle}>Notes</label>
+                        <input
+                            type="text"
+                            value={formValues.notes}
+                            onChange={e => setFormValues(prev => ({ ...prev, notes: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
 
             {/* SUMMARY */}
@@ -536,3 +718,21 @@ function formatVisitDate(dateValue) {
     );
 
 }
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
+};

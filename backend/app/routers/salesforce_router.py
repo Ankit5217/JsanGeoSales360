@@ -13,6 +13,7 @@ class UserRoleUpdate(BaseModel):
 
 from app.services.salesforce_service import  (
     get_accounts,
+    get_all_accounts,
     get_leads,
     get_opportunities,
     get_discovery_candidates,
@@ -158,6 +159,10 @@ router = APIRouter(
 @router.get("/accounts")
 def read_accounts():
     return get_accounts()
+
+@router.get("/accounts/all")
+def read_all_accounts():
+    return get_all_accounts()
 
 @router.get("/leads")
 def read_leads():

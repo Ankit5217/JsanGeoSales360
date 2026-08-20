@@ -2123,10 +2123,7 @@ def get_successful_meetings():
         "successful_meetings": data["totalSize"]
     }
 
-def get_accounts_map():
-
-    query = """
-    SELECT
+ACCOUNT_MAP_FIELDS = """
         Id,
         Name,
         Location__Latitude__s,
@@ -2139,9 +2136,37 @@ def get_accounts_map():
         Next_Visit_Date__c,
         AnnualRevenue,
         Owner.Name
+"""
+
+def get_accounts_map():
+
+    query = f"""
+    SELECT {ACCOUNT_MAP_FIELDS}
     FROM Account
     WHERE Location__Latitude__s != NULL
     AND Location__Longitude__s != NULL
+    """
+
+    url = (
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(query)}"
+    )
+
+    response = sf_request(
+        "GET",
+        url
+    )
+
+    return response.json()["records"]
+
+# Same fields as get_accounts_map(), minus the "must already have
+# coordinates" filter - that filter is correct for map pin placement,
+# wrong for a plain list (silently hid every account that hasn't been
+# geolocated yet, same root cause as the earlier Leads list bug).
+def get_all_accounts():
+
+    query = f"""
+    SELECT {ACCOUNT_MAP_FIELDS}
+    FROM Account
     """
 
     url = (
