@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
     getDiscoveryCandidates,
     updateDiscoveryCandidate,
     convertDiscoveryCandidateToLead,
-    createDiscoveryCandidate
+    createDiscoveryCandidate,
+    checkDiscoveryCandidateDuplicates
 } from "../../services/salesforceApi";
 
 const DISCOVERY_SOURCES = [
@@ -80,6 +81,11 @@ export default function Discovery() {
     });
     const [formError, setFormError] = useState("");
     const [formSubmitting, setFormSubmitting] = useState(false);
+
+    // Keyed by candidate id: { matches, error } once fetched, or absent
+    // if the panel for that row has never been opened / has been closed.
+    const [duplicatePanels, setDuplicatePanels] = useState({});
+    const [duplicateBusyId, setDuplicateBusyId] = useState(null);
 
 
     useEffect(() => {
@@ -184,6 +190,58 @@ export default function Discovery() {
         } finally {
 
             setBusyId(null);
+
+        }
+
+    }
+
+
+    async function handleCheckDuplicates(candidate) {
+
+        setDuplicatePanels(prev => {
+
+            const next = { ...prev };
+
+            // Toggle closed if the panel is already open for this row.
+            if (next[candidate.id]) {
+                delete next[candidate.id];
+                return next;
+            }
+
+            return next;
+
+        });
+
+        if (duplicatePanels[candidate.id]) {
+            return;
+        }
+
+        setDuplicateBusyId(candidate.id);
+
+        try {
+
+            const result = await checkDiscoveryCandidateDuplicates(candidate.id);
+
+            patchLocalCandidate(candidate.id, {
+                duplicate_status: result.duplicate_status,
+                confidence_score: result.confidence_score
+            });
+
+            setDuplicatePanels(prev => ({
+                ...prev,
+                [candidate.id]: { matches: result.matches || [], error: null }
+            }));
+
+        } catch (err) {
+
+            setDuplicatePanels(prev => ({
+                ...prev,
+                [candidate.id]: { matches: [], error: err.message || "Duplicate check failed" }
+            }));
+
+        } finally {
+
+            setDuplicateBusyId(null);
 
         }
 
@@ -464,9 +522,12 @@ export default function Discovery() {
                             const isConverted = !!candidate.related_lead;
                             const isApproved = candidate.review_status === "Approved";
                             const rowError = rowErrors[candidate.id];
+                            const isDuplicateBusy = duplicateBusyId === candidate.id;
+                            const duplicatePanel = duplicatePanels[candidate.id];
 
                             return (
-                                <tr key={candidate.id} style={{ borderBottom: "1px solid #eee" }}>
+                                <Fragment key={candidate.id}>
+                                <tr style={{ borderBottom: "1px solid #eee" }}>
 
                                     <td style={{ padding: "12px", fontWeight: "600", color: "#0B2E4F" }}>
                                         {candidate.candidate_name || candidate.record_name || "-"}
@@ -506,6 +567,19 @@ export default function Discovery() {
                                             value={candidate.duplicate_status}
                                             palette={DUPLICATE_COLORS}
                                         />
+                                        <div style={{ marginTop: "6px" }}>
+                                            <button
+                                                onClick={() => handleCheckDuplicates(candidate)}
+                                                disabled={isDuplicateBusy}
+                                                style={actionButtonStyle("#0B2E4F", isDuplicateBusy)}
+                                            >
+                                                {isDuplicateBusy
+                                                    ? "Checking..."
+                                                    : duplicatePanel
+                                                    ? "Hide Matches"
+                                                    : "Check Duplicates"}
+                                            </button>
+                                        </div>
                                     </td>
 
                                     <td style={{ padding: "12px" }}>
@@ -567,6 +641,60 @@ export default function Discovery() {
                                     </td>
 
                                 </tr>
+
+                                {duplicatePanel && (
+                                    <tr style={{ borderBottom: "1px solid #eee" }}>
+                                        <td colSpan={10} style={{ padding: "12px 16px", background: "#f9fafb" }}>
+
+                                            {duplicatePanel.error && (
+                                                <div style={{ color: "#c62828", fontSize: "13px" }}>
+                                                    {duplicatePanel.error}
+                                                </div>
+                                            )}
+
+                                            {!duplicatePanel.error && duplicatePanel.matches.length === 0 && (
+                                                <div style={{ color: "#666", fontSize: "13px" }}>
+                                                    No similar Leads, Accounts, or Discovery Candidates found.
+                                                </div>
+                                            )}
+
+                                            {!duplicatePanel.error && duplicatePanel.matches.length > 0 && (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                                    {duplicatePanel.matches.map((match, idx) => (
+                                                        <div
+                                                            key={`${match.source_type}-${match.id}-${idx}`}
+                                                            style={{
+                                                                display: "flex",
+                                                                justifyContent: "space-between",
+                                                                alignItems: "center",
+                                                                fontSize: "13px",
+                                                                padding: "6px 10px",
+                                                                background: "#fff",
+                                                                borderRadius: "6px",
+                                                                border: "1px solid #eee"
+                                                            }}
+                                                        >
+                                                            <span>
+                                                                <strong>{match.source_type}:</strong> {match.name || "-"}
+                                                                {match.matched_on.length > 0 && (
+                                                                    <span style={{ color: "#888" }}>
+                                                                        {" "}(matched on {match.matched_on.join(", ")})
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <span style={{ fontWeight: "bold", color: "#0B2E4F" }}>
+                                                                {match.score}%
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                        </td>
+                                    </tr>
+                                )}
+
+                                </Fragment>
                             );
 
                         })}

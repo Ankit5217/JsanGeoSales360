@@ -625,6 +625,29 @@ export async function convertDiscoveryCandidateToLead(candidateId) {
     return await response.json();
 }
 
+export async function checkDiscoveryCandidateDuplicates(candidateId) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/discovery-candidates/${candidateId}/check-duplicates`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to check for duplicates"
+        );
+
+    }
+
+    return await response.json();
+}
+
 // Unlike getAccounts() (GIS-filtered - only accounts that already have
 // a latitude/longitude, correct for the map, wrong for a plain list),
 // this returns every account regardless of whether it's been

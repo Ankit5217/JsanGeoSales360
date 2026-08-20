@@ -401,6 +401,11 @@ def get_discovery_candidates():
     return candidates
 
 def create_discovery_candidate(candidate: DiscoveryCandidateCreate):
+    from app.services.duplicate_detection import (
+        find_duplicate_matches,
+        classify_duplicate_status
+    )
+
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Discovery_Candidate__c"
 
     response = sf_request(
@@ -409,7 +414,31 @@ def create_discovery_candidate(candidate: DiscoveryCandidateCreate):
         json=candidate.model_dump(exclude_none=True)
     )
 
-    return response.json()
+    result = response.json()
+    new_id = result.get("id")
+
+    matches = find_duplicate_matches(
+        name=candidate.Candidate_Name__c or candidate.Name,
+        business=candidate.Business_Name__c,
+        phone=candidate.Phone__c,
+        address=candidate.Address__c,
+        exclude_id=new_id
+    )
+    duplicate_status, confidence_score = classify_duplicate_status(matches)
+
+    sf_request(
+        "PATCH",
+        f"{url}/{new_id}",
+        json={
+            "Duplicate_Status__c": duplicate_status,
+            "Confidence_Score__c": confidence_score
+        }
+    )
+
+    result["duplicate_status"] = duplicate_status
+    result["confidence_score"] = confidence_score
+
+    return result
 
 def update_discovery_candidate(
     candidate_id: str,
@@ -434,6 +463,55 @@ def delete_discovery_candidate(candidate_id: str):
 
     return {
         "message": "Discovery Candidate deleted successfully"
+    }
+
+def check_discovery_candidate_duplicates(candidate_id: str):
+    from app.services.duplicate_detection import (
+        find_duplicate_matches,
+        classify_duplicate_status
+    )
+
+    detail_url = (
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/Discovery_Candidate__c/{candidate_id}"
+    )
+
+    response = sf_request(
+        "GET",
+        detail_url,
+        params={
+            "fields": (
+                "Name,Candidate_Name__c,Business_Name__c,Phone__c,Address__c,"
+                "Location__Latitude__s,Location__Longitude__s"
+            )
+        }
+    )
+
+    candidate = response.json()
+
+    matches = find_duplicate_matches(
+        name=candidate.get("Candidate_Name__c") or candidate.get("Name"),
+        business=candidate.get("Business_Name__c"),
+        phone=candidate.get("Phone__c"),
+        address=candidate.get("Address__c"),
+        latitude=candidate.get("Location__Latitude__s"),
+        longitude=candidate.get("Location__Longitude__s"),
+        exclude_id=candidate_id
+    )
+    duplicate_status, confidence_score = classify_duplicate_status(matches)
+
+    sf_request(
+        "PATCH",
+        detail_url,
+        json={
+            "Duplicate_Status__c": duplicate_status,
+            "Confidence_Score__c": confidence_score
+        }
+    )
+
+    return {
+        "duplicate_status": duplicate_status,
+        "confidence_score": confidence_score,
+        "matches": matches
     }
 
 def convert_discovery_candidate_to_lead(candidate_id: str):

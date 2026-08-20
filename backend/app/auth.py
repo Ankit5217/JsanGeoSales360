@@ -4,10 +4,17 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+# Load .env directly rather than relying on some other module (e.g.
+# salesforce_client) to have loaded it first - this module is imported
+# before salesforce_router in main.py, so that ordering can't be assumed.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 logger = logging.getLogger(__name__)
 

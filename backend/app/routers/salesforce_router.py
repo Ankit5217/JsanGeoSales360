@@ -33,6 +33,7 @@ from app.services.salesforce_service import  (
     update_discovery_candidate,
     delete_discovery_candidate,
     convert_discovery_candidate_to_lead,
+    check_discovery_candidate_duplicates,
     create_territory,
     update_territory,
     delete_territory,
@@ -264,6 +265,12 @@ def convert_candidate_to_lead(
     candidate_id: str
 ):
     return convert_discovery_candidate_to_lead(candidate_id)
+
+@router.post("/discovery-candidates/{candidate_id}/check-duplicates")
+def check_candidate_duplicates(
+    candidate_id: str
+):
+    return check_discovery_candidate_duplicates(candidate_id)
 
 @router.post("/territories")
 def create_new_territory(territory: TerritoryCreate):
