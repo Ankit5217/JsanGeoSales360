@@ -175,8 +175,25 @@ def delete_account(account_id: str):
         "message": "Account deleted successfully"
     }
 
+# Salesforce Developer Edition orgs ship with a fixed batch of generic
+# sample leads (Bertha Boxer, Phyllis Cotton, etc.) pre-loaded. These
+# are that exact batch's record Ids, so get_leads() can exclude them and
+# show only leads actually created through real use of this app.
+SAMPLE_LEAD_IDS = [
+    "00QgL00000Yl4B3UAJ", "00QgL00000Yl4B4UAJ", "00QgL00000Yl4B5UAJ",
+    "00QgL00000Yl4B6UAJ", "00QgL00000Yl4B7UAJ", "00QgL00000Yl4B8UAJ",
+    "00QgL00000Yl4B9UAJ", "00QgL00000Yl4BAUAZ", "00QgL00000Yl4BBUAZ",
+    "00QgL00000Yl4BCUAZ", "00QgL00000Yl4BDUAZ", "00QgL00000Yl4BEUAZ",
+    "00QgL00000Yl4BFUAZ", "00QgL00000Yl4BGUAZ", "00QgL00000Yl4BHUAZ",
+    "00QgL00000Yl4BIUAZ", "00QgL00000Yl4BJUAZ", "00QgL00000Yl4BKUAZ",
+    "00QgL00000Yl4BLUAZ", "00QgL00000Yl4BMUAZ", "00QgL00000Yl4BNUAZ",
+    "00QgL00000Yl4BOUAZ"
+]
+
 def get_leads():
-    query = """
+    excluded_ids = ", ".join(f"'{lead_id}'" for lead_id in SAMPLE_LEAD_IDS)
+
+    query = f"""
     SELECT
         Id,
         Name,
@@ -192,6 +209,7 @@ def get_leads():
         Location__Longitude__s,
         Territory_ID__c
     FROM Lead
+    WHERE Id NOT IN ({excluded_ids})
     """
 
     url = (

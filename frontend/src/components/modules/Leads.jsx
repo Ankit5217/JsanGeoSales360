@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getLeads } from "../../services/salesforceApi";
+import { getAllLeads } from "../../services/salesforceApi";
 
 export default function Leads() {
 
@@ -26,7 +26,7 @@ export default function Leads() {
                 setLoading(true);
                 setError("");
 
-                const data = await getLeads();
+                const data = await getAllLeads();
 
                 console.log("=== LEADS: API RESPONSE ===");
                 console.log(data);

@@ -120,6 +120,41 @@ export async function getLeads() {
 
 }
 
+// Unlike getLeads() (which hits the GIS-filtered endpoint and only
+// returns leads that already have a latitude/longitude - fine for the
+// map, but silently hides most leads elsewhere), this returns every
+// lead regardless of whether it's been geolocated yet.
+export async function getAllLeads() {
+
+    try {
+
+        const response = await authFetch(
+            `${BASE_URL}/salesforce/leads`
+        );
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to fetch leads"
+            );
+
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error(
+            "Leads API Error:",
+            error
+        );
+
+        return [];
+
+    }
+
+}
+
 export async function getTerritories() {
 
     try {
