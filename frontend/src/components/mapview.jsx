@@ -4,7 +4,7 @@ import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
-import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,createFieldVisit
+import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,createFieldVisit,optimizeRoute
 } from "../services/salesforceApi";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
 import {
@@ -75,6 +75,36 @@ function getCurrentPosition() {
     });
   });
 }
+// Decodes the Google-encoded polyline (precision 5) that OpenRouteService
+// returns for a route's geometry, into an array of [lat, lng] pairs.
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0, lat = 0, lng = 0;
+
+  while (index < encoded.length) {
+    let result = 1, shift = 0, b;
+    do {
+      b = encoded.charCodeAt(index++) - 63 - 1;
+      result += b << shift;
+      shift += 5;
+    } while (b >= 0x1f);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    result = 1;
+    shift = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63 - 1;
+      result += b << shift;
+      shift += 5;
+    } while (b >= 0x1f);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    points.push([lat * 1e-5, lng * 1e-5]);
+  }
+
+  return points;
+}
+
 function haversine(a, b) {
   const R = 6371;
   const dLat = (b[0] - a[0]) * Math.PI / 180;
@@ -82,18 +112,6 @@ function haversine(a, b) {
   const lat1 = a[0] * Math.PI / 180, lat2 = b[0] * Math.PI / 180;
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-function nearestNeighborRoute(stops) {
-  if (stops.length < 2) return stops;
-  const remaining = [...stops];
-  const ordered = [remaining.shift()];
-  while (remaining.length) {
-    const last = ordered[ordered.length - 1];
-    remaining.sort((a, b) => haversine([last.lat, last.lng], [a.lat, a.lng]) - haversine([last.lat, last.lng], [b.lat, b.lng]));
-    ordered.push(remaining.shift());
-  }
-  return ordered;
 }
 
 function FitToRoute({ stops }) {
@@ -420,6 +438,10 @@ useEffect(() => {
   const [visitFollowUp, setVisitFollowUp] = useState("");
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [route, setRoute] = useState(null);
+  const [routeGeometry, setRouteGeometry] = useState(null);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState("");
   const [routeTerritory, setRouteTerritory] = useState('');
 const territoryOptions = [
     ...new Set(
@@ -1333,38 +1355,67 @@ async function checkOut() {
 
     }
 }
-// function generateRoute() {
+async function runRouteOptimization(stops) {
 
-//     console.log("========== ROUTE DEBUG ==========");
+    // First stop is treated as the starting point (matches the old
+    // nearestNeighborRoute behavior, which always chained forward from
+    // stops[0]); the rest are optimized as visit-order jobs against real
+    // road distances via OpenRouteService.
+    const [start, ...jobStops] = stops;
 
-//     console.log("Selected Territory:", routeTerritory);
+    setRouteLoading(true);
+    setRouteError("");
 
-//     records.forEach(r => {
-//         console.log(
-//             r.name,
-//             "| Territory =", r.territory,
-//             "| Status =", r.visitStatus
-//         );
-//     });
+    try {
 
-//     const stops = records.filter(
-//         r =>
-//             r.territory === routeTerritory &&
-//             r.visitStatus === "pending"
-//     );
+        if (jobStops.length === 0) {
+            setRoute(stops);
+            setRouteGeometry(null);
+            setRouteInfo(null);
+            return;
+        }
 
-//     console.log("Matching Stops:", stops);
+        const result = await optimizeRoute(
+            jobStops.map(s => ({ id: s.id, name: s.name, lat: s.lat, lng: s.lng })),
+            { lat: start.lat, lng: start.lng }
+        );
 
-//     if (stops.length < 2) {
-//         alert("Not enough pending-visit stops in this territory to build a route.");
-//         setRoute(null);
-//         return;
-//     }
+        const byId = new Map(stops.map(s => [s.id, s]));
 
-//     setRoute(nearestNeighborRoute(stops));
-// }
+        const orderedFullStops = [
+            start,
+            ...result.ordered_stops.map(o => byId.get(o.id)).filter(Boolean)
+        ];
 
-function generateRoute() {
+        setRoute(orderedFullStops);
+        setRouteGeometry(
+            result.geometry ? decodePolyline(result.geometry) : null
+        );
+        setRouteInfo({
+            distanceKm: result.distance_meters / 1000,
+            etaMin: result.duration_seconds / 60
+        });
+
+    } catch (error) {
+
+        console.error("Route optimization failed:", error);
+
+        setRouteError(
+            error.message || "Failed to generate a real route. Try again."
+        );
+        setRoute(null);
+        setRouteGeometry(null);
+        setRouteInfo(null);
+
+    } finally {
+
+        setRouteLoading(false);
+
+    }
+
+}
+
+async function generateRoute() {
 
     console.log("========== ROUTE GENERATION ==========");
 
@@ -1434,19 +1485,7 @@ function generateRoute() {
     // optimize those stops
     if (pendingStops.length >= 2) {
 
-        const optimizedRoute =
-            nearestNeighborRoute(
-                pendingStops
-            );
-
-        console.log(
-            "Optimized Route:",
-            optimizedRoute
-        );
-
-        setRoute(
-            optimizedRoute
-        );
+        await runRouteOptimization(pendingStops);
 
         return;
     }
@@ -1463,19 +1502,7 @@ function generateRoute() {
             "Creating route using all territory records."
         );
 
-        const optimizedRoute =
-            nearestNeighborRoute(
-                territoryRecords
-            );
-
-        console.log(
-            "Optimized Fallback Route:",
-            optimizedRoute
-        );
-
-        setRoute(
-            optimizedRoute
-        );
+        await runRouteOptimization(territoryRecords);
 
         return;
     }
@@ -1540,6 +1567,15 @@ const exportBusinessData = () => {
 
 
   const routeStats = route ? (() => {
+    if (routeInfo) {
+      return {
+        stops: route.length,
+        distKm: routeInfo.distanceKm.toFixed(1),
+        etaMin: Math.round(routeInfo.etaMin)
+      };
+    }
+    // Straight-line fallback - only used if ORS didn't return usable
+    // distance/duration for some reason (route order is still real).
     let dist = 0;
     for (let i = 1; i < route.length; i++) dist += haversine([route[i - 1].lat, route[i - 1].lng], [route[i].lat, route[i].lng]);
     return { stops: route.length, distKm: dist.toFixed(1), etaMin: Math.round(dist / 28 * 60) };
@@ -4684,13 +4720,30 @@ t.aiScore>=80
 </select>
 
 <button
+    disabled={routeLoading}
     onClick={() => {
         console.log("🟢 GENERATE ROUTE BUTTON CLICKED");
         generateRoute();
     }}
+    style={{ cursor: routeLoading ? 'default' : 'pointer' }}
 >
-    Generate Route
+    {routeLoading ? "Calculating road route..." : "Generate Route"}
 </button>
+
+{routeError && (
+    <div
+        style={{
+            marginTop: '10px',
+            fontSize: '12px',
+            color: '#C1443C',
+            background: '#fdecea',
+            padding: '8px',
+            borderRadius: '6px'
+        }}
+    >
+        ⚠ {routeError}
+    </div>
+)}
 
 {routeStats && (
     <div
@@ -4724,7 +4777,12 @@ t.aiScore>=80
         </div>
 
         <button
-            onClick={() => setRoute(null)}
+            onClick={() => {
+                setRoute(null);
+                setRouteGeometry(null);
+                setRouteInfo(null);
+                setRouteError("");
+            }}
             style={{
                 marginTop: '8px',
                 width: '100%',
@@ -4994,7 +5052,14 @@ t.aiScore>=80
 
           {route && (
             <>
-              <Polyline positions={route.map(s => [s.lat, s.lng])} pathOptions={{ color: '#D98F00', weight: 3, dashArray: '6 5' }} />
+              <Polyline
+                positions={routeGeometry || route.map(s => [s.lat, s.lng])}
+                pathOptions={{
+                  color: '#D98F00',
+                  weight: 3,
+                  dashArray: routeGeometry ? null : '6 5'
+                }}
+              />
               {route.map((s, i) => (
                 <CircleMarker
                   key={'route-' + s.id}

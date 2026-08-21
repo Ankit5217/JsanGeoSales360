@@ -4,6 +4,8 @@ from fastapi import APIRouter
 from app.realtime import broadcast_event
 from app.services.salesforce_service import update_account
 from app.salesforce_client import get_salesforce_users
+from app.services.routing_service import optimize_route
+from app.schemas.routing_schema import RouteOptimizeRequest
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -679,4 +681,11 @@ def edit_lead(
     return update_lead(
         lead_id,
         lead
+    )
+
+@router.post("/routing/optimize")
+def route_optimize(payload: RouteOptimizeRequest):
+    return optimize_route(
+        [stop.model_dump() for stop in payload.stops],
+        payload.start.model_dump()
     )

@@ -926,6 +926,31 @@ export async function updateOpportunity(opportunityId, data) {
     return await response.json();
 }
 
+export async function optimizeRoute(stops, start) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/routing/optimize`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stops, start })
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to optimize route"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function updateFieldVisit(visitId, data) {
 
     const response = await authFetch(
