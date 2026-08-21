@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "../context/UserContext";
 import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,createFieldVisit,optimizeRoute
+import "leaflet-draw";
+import "leaflet-draw/dist/leaflet.draw.css";
+import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,createFieldVisit,optimizeRoute,getTerritories,updateTerritory,assignTerritories
 } from "../services/salesforceApi";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
 import {
@@ -27,20 +30,20 @@ import {
 
 } from "recharts";
 
-const TERRITORIES = [
-  { id: 'T1', name: 'Hyderabad', center: [17.385, 78.4867], color: '#0E8388' },
-  { id: 'T2', name: 'Bangalore', center: [12.9716, 77.5946], color: '#0B2E4F' },
-  
-];
+// Distinct colors cycled across however many territories have a saved
+// boundary - real data now, not a fixed two-territory list.
+const TERRITORY_BOUNDARY_COLORS = ['#0E8388', '#7B1FA2', '#D98F00', '#2E7D32', '#C1443C', '#1565C0'];
 
-
-function territoryRing(center, r) {
-  const pts = [];
-  for (let a = 0; a < 360; a += 45) {
-    const rad = (a * Math.PI) / 180;
-    pts.push([center[0] + Math.cos(rad) * r, center[1] + Math.sin(rad) * r * 1.15]);
+function parseTerritoryBoundary(territory) {
+  if (!territory.Boundary_GeoJSON__c) return null;
+  try {
+    const geometry = JSON.parse(territory.Boundary_GeoJSON__c);
+    if (geometry.type !== "Polygon") return null;
+    return geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
+  } catch (err) {
+    console.error("Saved territory boundary is not valid GeoJSON:", err);
+    return null;
   }
-  return pts;
 }
 
 const INITIAL_RECORDS = [
@@ -119,6 +122,93 @@ function FitToRoute({ stops }) {
   if (stops.length > 1) {
     map.fitBounds(stops.map(s => [s.lat, s.lng]), { padding: [60, 60] });
   }
+  return null;
+}
+
+// Lets the user draw or edit one territory's boundary polygon directly on
+// the map, using the leaflet-draw plugin. Only active while a territory
+// is selected for editing; otherwise renders nothing. Reports the current
+// drawn/edited shape up to the parent as GeoJSON on every change, so the
+// parent's "Save Boundary" button always has the latest shape without
+// needing an imperative getter.
+function TerritoryDrawControl({ initialGeoJSON, onChange }) {
+  const map = useMap();
+  const featureGroupRef = useRef(null);
+  const drawControlRef = useRef(null);
+
+  useEffect(() => {
+
+    const featureGroup = new L.FeatureGroup();
+    map.addLayer(featureGroup);
+    featureGroupRef.current = featureGroup;
+
+    if (initialGeoJSON) {
+      try {
+        L.geoJSON(initialGeoJSON).eachLayer(layer => {
+          featureGroup.addLayer(layer);
+        });
+        if (featureGroup.getLayers().length > 0) {
+          map.fitBounds(featureGroup.getBounds(), { padding: [40, 40] });
+        }
+      } catch (err) {
+        console.error("Failed to load existing territory boundary:", err);
+      }
+    }
+
+    const drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          shapeOptions: { color: '#0B2E4F' }
+        },
+        marker: false,
+        circle: false,
+        circlemarker: false,
+        polyline: false,
+        rectangle: false
+      },
+      edit: {
+        featureGroup,
+        remove: true
+      }
+    });
+
+    map.addControl(drawControl);
+    drawControlRef.current = drawControl;
+
+    function reportChange() {
+      const layers = featureGroup.getLayers();
+      if (layers.length === 0) {
+        onChange(null);
+        return;
+      }
+      // Only one boundary per territory - keep just the most recent shape.
+      while (layers.length > 1) {
+        featureGroup.removeLayer(layers[0]);
+        layers.shift();
+      }
+      onChange(layers[0].toGeoJSON().geometry);
+    }
+
+    map.on(L.Draw.Event.CREATED, e => {
+      featureGroup.addLayer(e.layer);
+      reportChange();
+    });
+    map.on(L.Draw.Event.EDITED, reportChange);
+    map.on(L.Draw.Event.DELETED, reportChange);
+
+    return () => {
+      map.off(L.Draw.Event.CREATED);
+      map.off(L.Draw.Event.EDITED);
+      map.off(L.Draw.Event.DELETED);
+      map.removeControl(drawControl);
+      map.removeLayer(featureGroup);
+    };
+
+  }, [map]);
+
   return null;
 }
 
@@ -239,6 +329,13 @@ console.log(
   const [liveActivityFeed, setLiveActivityFeed] = useState([]);
   const [leadRecords, setLeadRecords] = useState([]);
   const [opportunityRecords, setOpportunityRecords] = useState([]);
+  const [territoryList, setTerritoryList] = useState([]);
+  const [boundaryEditTerritoryId, setBoundaryEditTerritoryId] = useState("");
+  const [pendingBoundary, setPendingBoundary] = useState(null);
+  const [boundarySaving, setBoundarySaving] = useState(false);
+  const [boundaryMessage, setBoundaryMessage] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignMessage, setAssignMessage] = useState("");
       async function loadAccounts() {
 
         try {
@@ -417,13 +514,119 @@ async function loadOpportunities() {
 
 }
 
+async function loadTerritories() {
+
+    try {
+
+        const data = await getTerritories();
+
+        setTerritoryList(Array.isArray(data) ? data : []);
+
+    } catch (error) {
+
+        console.error("Territory Loading Error:", error);
+
+    }
+
+}
+
 useEffect(() => {
 
         loadAccounts();
         loadLeads();
         loadOpportunities();
+        loadTerritories();
 
 }, []);
+
+function handleStartBoundaryEdit(territoryId) {
+
+    const territory = territoryList.find(t => t.Id === territoryId);
+    let initial = null;
+
+    if (territory?.Boundary_GeoJSON__c) {
+        try {
+            initial = JSON.parse(territory.Boundary_GeoJSON__c);
+        } catch (err) {
+            console.error("Saved boundary is not valid GeoJSON:", err);
+        }
+    }
+
+    setBoundaryEditTerritoryId(territoryId);
+    setPendingBoundary(initial);
+    setBoundaryMessage("");
+
+}
+
+function handleCancelBoundaryEdit() {
+
+    setBoundaryEditTerritoryId("");
+    setPendingBoundary(null);
+    setBoundaryMessage("");
+
+}
+
+async function handleSaveBoundary() {
+
+    if (!boundaryEditTerritoryId || !pendingBoundary) {
+        setBoundaryMessage("Draw a polygon on the map first.");
+        return;
+    }
+
+    setBoundarySaving(true);
+    setBoundaryMessage("");
+
+    try {
+
+        await updateTerritory(boundaryEditTerritoryId, {
+            Boundary_GeoJSON__c: JSON.stringify(pendingBoundary)
+        });
+
+        setBoundaryMessage("Boundary saved.");
+        setBoundaryEditTerritoryId("");
+        setPendingBoundary(null);
+
+        await loadTerritories();
+
+    } catch (error) {
+
+        setBoundaryMessage(error.message || "Failed to save boundary.");
+
+    } finally {
+
+        setBoundarySaving(false);
+
+    }
+
+}
+
+async function handleAssignTerritories() {
+
+    setAssignLoading(true);
+    setAssignMessage("");
+
+    try {
+
+        const result = await assignTerritories();
+
+        setAssignMessage(
+            `${result.accounts_updated} accounts, ${result.leads_updated} leads, ` +
+            `${result.discovery_candidates_updated} discovery candidates reassigned.`
+        );
+
+        await Promise.all([loadAccounts(), loadLeads()]);
+
+    } catch (error) {
+
+        setAssignMessage(error.message || "Failed to assign territories.");
+
+    } finally {
+
+        setAssignLoading(false);
+
+    }
+
+}
 
   const [typeFilter, setTypeFilter] = useState('');
   const [territoryFilter, setTerritoryFilter] = useState('');
@@ -4682,6 +4885,104 @@ t.aiScore>=80
         paddingTop: '14px'
     }}
 >
+    Territory Boundaries
+</h3>
+
+{!boundaryEditTerritoryId ? (
+    <>
+        <select
+            value=""
+            onChange={e => e.target.value && handleStartBoundaryEdit(e.target.value)}
+            style={{
+                width: '100%',
+                marginBottom: '10px',
+                padding: '8px',
+                border: '1px solid #ccc',
+                borderRadius: '5px'
+            }}
+        >
+            <option value="">Draw / edit a territory...</option>
+            {territoryList.map(t => (
+                <option key={t.Id} value={t.Id}>
+                    {t.Territory_Name__c || t.Name}
+                    {t.Boundary_GeoJSON__c ? " (has boundary)" : ""}
+                </option>
+            ))}
+        </select>
+
+        {boundaryMessage && (
+            <div style={{ marginBottom: '8px', fontSize: '11px', color: '#2E7D32' }}>
+                {boundaryMessage}
+            </div>
+        )}
+
+        <button
+            disabled={assignLoading}
+            onClick={handleAssignTerritories}
+            style={{ width: '100%', cursor: assignLoading ? 'default' : 'pointer' }}
+        >
+            {assignLoading ? "Assigning..." : "Recalculate Territory Assignments"}
+        </button>
+
+        {assignMessage && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#0B2E4F' }}>
+                {assignMessage}
+            </div>
+        )}
+    </>
+) : (
+    <div style={{ fontSize: '12px' }}>
+        <div style={{ marginBottom: '8px', color: '#555' }}>
+            Draw a polygon on the map (use the tools in the top-right
+            corner of the map), then save it.
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+                disabled={boundarySaving || !pendingBoundary}
+                onClick={handleSaveBoundary}
+                style={{
+                    flex: 1,
+                    padding: '8px',
+                    fontWeight: 700,
+                    border: 'none',
+                    borderRadius: '5px',
+                    background: (boundarySaving || !pendingBoundary) ? '#9aa8b5' : '#0B2E4F',
+                    color: '#fff',
+                    cursor: (boundarySaving || !pendingBoundary) ? 'default' : 'pointer'
+                }}
+            >
+                {boundarySaving ? "Saving..." : "Save Boundary"}
+            </button>
+            <button
+                onClick={handleCancelBoundaryEdit}
+                style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: '1px solid #ccc',
+                    borderRadius: '5px',
+                    background: '#fff',
+                    cursor: 'pointer'
+                }}
+            >
+                Cancel
+            </button>
+        </div>
+
+        {boundaryMessage && (
+            <div style={{ marginTop: '8px', color: '#C1443C' }}>
+                {boundaryMessage}
+            </div>
+        )}
+    </div>
+)}
+
+<h3
+    style={{
+        borderTop: '1px solid #eee',
+        paddingTop: '14px'
+    }}
+>
     Route Planning
 </h3>
 
@@ -4930,14 +5231,34 @@ t.aiScore>=80
     attribution="&copy; OpenStreetMap contributors"
 />
 <FitToRecords records={filteredMapRecords} />
-          {showTerritories && (
+          {showTerritories && !boundaryEditTerritoryId && (
             <LayerGroup>
-              {TERRITORIES.map(t => (
-                <Polygon key={t.id} positions={territoryRing(t.center, 0.25)} pathOptions={{ color: t.color, weight: 2, fillOpacity: 0.06, dashArray: '4 3' }}>
-                  <Tooltip>{t.name} Territory</Tooltip>
-                </Polygon>
-              ))}
+              {territoryList.map((t, idx) => {
+                const positions = parseTerritoryBoundary(t);
+                if (!positions) return null;
+                return (
+                  <Polygon
+                    key={t.Id}
+                    positions={positions}
+                    pathOptions={{
+                      color: TERRITORY_BOUNDARY_COLORS[idx % TERRITORY_BOUNDARY_COLORS.length],
+                      weight: 2,
+                      fillOpacity: 0.08
+                    }}
+                  >
+                    <Tooltip>{t.Territory_Name__c || t.Name} Territory</Tooltip>
+                  </Polygon>
+                );
+              })}
             </LayerGroup>
+          )}
+
+          {boundaryEditTerritoryId && (
+            <TerritoryDrawControl
+              key={boundaryEditTerritoryId}
+              initialGeoJSON={pendingBoundary}
+              onChange={setPendingBoundary}
+            />
           )}
 
 <LayerGroup>
@@ -5116,7 +5437,7 @@ style={{
 </span>
               <h3 style={{ margin: '4px 0' }}>{selected.name}</h3>
               <div style={{ fontSize: '11px', color: '#666', marginBottom: '14px' }}>
-                {selected.id} · {TERRITORIES.find(t => t.id === selected.territory)?.name} Territory
+                {selected.id} · {territoryList.find(t => t.Territory_Code__c === selected.territory)?.Territory_Name__c || selected.territory || "Unassigned"} Territory
               </div>
               {(selected.type === "opportunity" ? [
                 ['Account', selected.accountName],

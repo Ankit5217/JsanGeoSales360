@@ -23,6 +23,8 @@ class TerritoryCreate(BaseModel):
 
     Territory_Manager__c: str | None = None
 
+    Boundary_GeoJSON__c: str | None = None
+
 
 class TerritoryUpdate(BaseModel):
 
@@ -45,3 +47,5 @@ class TerritoryUpdate(BaseModel):
     Representative__c: str | None = None
 
     Territory_Manager__c: str | None = None
+
+    Boundary_GeoJSON__c: str | None = None

@@ -751,6 +751,54 @@ export async function createTerritory(data) {
     return await response.json();
 }
 
+export async function updateTerritory(territoryId, data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/territories/${territoryId}`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to update territory"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function assignTerritories() {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/territories/assign`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to assign territories"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function createRoute(data) {
 
     const response = await authFetch(

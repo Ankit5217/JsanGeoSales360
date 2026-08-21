@@ -116,6 +116,7 @@ from app.services.salesforce_service import  (
     get_field_visits_by_date,
     get_field_visits_by_outcome,
     update_salesforce_user_role,
+    assign_territories_by_boundary,
 
 )
 
@@ -689,3 +690,7 @@ def route_optimize(payload: RouteOptimizeRequest):
         [stop.model_dump() for stop in payload.stops],
         payload.start.model_dump()
     )
+
+@router.post("/territories/assign")
+def assign_territories():
+    return assign_territories_by_boundary()

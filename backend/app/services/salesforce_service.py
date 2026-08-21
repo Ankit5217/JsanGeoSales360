@@ -134,6 +134,111 @@ def _assign_random_location(sobject: str, record_id: str):
         }
     )
 
+    return lat, lng
+
+def _assign_territory_by_point(sobject: str, record_id: str, lat: float, lng: float, territory_field: str):
+    """
+    Looks up which saved territory boundary (if any) contains (lat, lng)
+    and writes its Territory_Code__c into `territory_field`. A no-op if
+    no territory has a saved boundary yet, or none covers this point.
+    """
+    from app.services.territory_assignment_service import find_territory_code_for_point
+
+    territories = get_territory_assignments()
+    territories_with_boundary = [t for t in territories if t.get("boundary_geojson")]
+
+    if not territories_with_boundary:
+        return
+
+    code = find_territory_code_for_point(lat, lng, territories_with_boundary)
+
+    if code:
+        sf_request(
+            "PATCH",
+            f"{INSTANCE_URL}/services/data/v64.0/sobjects/{sobject}/{record_id}",
+            json={territory_field: code}
+        )
+
+def assign_territories_by_boundary():
+    """
+    Recomputes Territory_ID__c (Account/Lead) / Assigned_Territory__c
+    (Discovery Candidate) for every real record that has coordinates,
+    based on which saved territory boundary (if any) now contains that
+    point. Run on demand from the GIS Map after drawing/editing a
+    boundary - existing records aren't reassigned automatically.
+    """
+    from app.services.territory_assignment_service import find_territory_code_for_point
+
+    territories = get_territory_assignments()
+    territories_with_boundary = [t for t in territories if t.get("boundary_geojson")]
+
+    if not territories_with_boundary:
+        return {
+            "message": "No territory has a saved boundary yet - nothing to assign.",
+            "accounts_updated": 0,
+            "leads_updated": 0,
+            "discovery_candidates_updated": 0
+        }
+
+    def reassign(sobject, records, territory_field):
+        updated = 0
+        for record in records:
+            code = find_territory_code_for_point(
+                record.get("Location__Latitude__s"),
+                record.get("Location__Longitude__s"),
+                territories_with_boundary
+            )
+            if code and code != record.get(territory_field):
+                sf_request(
+                    "PATCH",
+                    f"{INSTANCE_URL}/services/data/v64.0/sobjects/{sobject}/{record['Id']}",
+                    json={territory_field: code}
+                )
+                updated += 1
+        return updated
+
+    account_query = """
+    SELECT Id, Location__Latitude__s, Location__Longitude__s, Territory_ID__c
+    FROM Account
+    WHERE Location__Latitude__s != NULL
+    """
+    accounts = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(account_query)}"
+    ).json()["records"]
+    accounts_updated = reassign("Account", accounts, "Territory_ID__c")
+
+    excluded_ids = ", ".join(f"'{lead_id}'" for lead_id in SAMPLE_LEAD_IDS)
+    lead_query = f"""
+    SELECT Id, Location__Latitude__s, Location__Longitude__s, Territory_ID__c
+    FROM Lead
+    WHERE Location__Latitude__s != NULL
+    AND Id NOT IN ({excluded_ids})
+    """
+    leads = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(lead_query)}"
+    ).json()["records"]
+    leads_updated = reassign("Lead", leads, "Territory_ID__c")
+
+    candidate_query = """
+    SELECT Id, Location__Latitude__s, Location__Longitude__s, Assigned_Territory__c
+    FROM Discovery_Candidate__c
+    WHERE Location__Latitude__s != NULL
+    """
+    candidates = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(candidate_query)}"
+    ).json()["records"]
+    candidates_updated = reassign("Discovery_Candidate__c", candidates, "Assigned_Territory__c")
+
+    return {
+        "message": "Territory assignment complete",
+        "accounts_updated": accounts_updated,
+        "leads_updated": leads_updated,
+        "discovery_candidates_updated": candidates_updated
+    }
+
 def create_account(account: AccountCreate):
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account"
 
@@ -145,7 +250,8 @@ def create_account(account: AccountCreate):
 
     result = response.json()
 
-    _assign_random_location("Account", result["id"])
+    lat, lng = _assign_random_location("Account", result["id"])
+    _assign_territory_by_point("Account", result["id"], lat, lng, "Territory_ID__c")
 
     return result
 
@@ -298,7 +404,8 @@ def create_lead(lead: LeadCreate):
 
     result = response.json()
 
-    _assign_random_location("Lead", result["id"])
+    lat, lng = _assign_random_location("Lead", result["id"])
+    _assign_territory_by_point("Lead", result["id"], lat, lng, "Territory_ID__c")
 
     return result
 
@@ -523,6 +630,14 @@ def create_discovery_candidate(candidate: DiscoveryCandidateCreate):
         }
     )
 
+    # Random placeholder location (same reasoning as Accounts/Leads - see
+    # _assign_random_location) so this candidate shows up on the GIS Map
+    # and is searchable. Deliberately NOT fed into the duplicate-match
+    # spatial scoring above - it's synthetic, not a real position, so
+    # using it there would produce meaningless proximity signals.
+    lat, lng = _assign_random_location("Discovery_Candidate__c", new_id)
+    _assign_territory_by_point("Discovery_Candidate__c", new_id, lat, lng, "Assigned_Territory__c")
+
     result["duplicate_status"] = duplicate_status
     result["confidence_score"] = confidence_score
 
@@ -654,7 +769,8 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
 
     lead_id = lead_response.json()["id"]
 
-    _assign_random_location("Lead", lead_id)
+    lat, lng = _assign_random_location("Lead", lead_id)
+    _assign_territory_by_point("Lead", lead_id, lat, lng, "Territory_ID__c")
 
     sf_request(
         "PATCH",
@@ -678,7 +794,8 @@ def get_territory_assignments():
         Territory_Name__c,
         Territory_Code__c,
         Status__c,
-        Coverage_Percentage__c
+        Coverage_Percentage__c,
+        Boundary_GeoJSON__c
     FROM Territory_Assignment__c
     """
 
@@ -703,7 +820,8 @@ def get_territory_assignments():
             "territory_name": record.get("Territory_Name__c"),
             "territory_code": record.get("Territory_Code__c"),
             "status": record.get("Status__c"),
-            "coverage": record.get("Coverage_Percentage__c")
+            "coverage": record.get("Coverage_Percentage__c"),
+            "boundary_geojson": record.get("Boundary_GeoJSON__c")
         })
 
     return territories
@@ -2716,7 +2834,8 @@ def get_territories_map():
         Territory_Code__c,
         Territory_Manager__r.Name,
         Status__c,
-        Coverage_Percentage__c
+        Coverage_Percentage__c,
+        Boundary_GeoJSON__c
     FROM Territory_Assignment__c
     """
 
