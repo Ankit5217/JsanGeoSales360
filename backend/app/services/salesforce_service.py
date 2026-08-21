@@ -720,7 +720,14 @@ def get_field_visits():
         Check_In_Time__c,
         Check_Out_Time__c,
         Visit_Outcome__c,
-        Follow_Up_Date__c
+        Follow_up_Date__c,
+        Notes__c,
+        Account__c,
+        Account__r.Name,
+        Lead__c,
+        Lead__r.Name,
+        Representative__c,
+        Representative__r.Name
     FROM Field_Visit__c
     """
 
@@ -739,6 +746,10 @@ def get_field_visits():
     visits = []
 
     for record in data["records"]:
+        account = record.get("Account__r") or {}
+        lead = record.get("Lead__r") or {}
+        representative = record.get("Representative__r") or {}
+
         visits.append({
             "id": record.get("Id"),
             "name": record.get("Name"),
@@ -746,7 +757,13 @@ def get_field_visits():
             "check_in": record.get("Check_In_Time__c"),
             "check_out": record.get("Check_Out_Time__c"),
             "outcome": record.get("Visit_Outcome__c"),
-            "follow_up": record.get("Follow_Up_Date__c")
+            "follow_up": record.get("Follow_up_Date__c"),
+            "notes": record.get("Notes__c"),
+            "account_id": record.get("Account__c"),
+            "account_name": account.get("Name"),
+            "lead_id": record.get("Lead__c"),
+            "lead_name": lead.get("Name"),
+            "representative_name": representative.get("Name")
         })
 
     return visits

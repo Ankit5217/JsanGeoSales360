@@ -4,8 +4,9 @@ import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, useMap } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
-import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap
+import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,createFieldVisit
 } from "../services/salesforceApi";
+import { VISIT_OUTCOMES } from "./modules/FieldVisits";
 import {
     PieChart,
     Pie,
@@ -58,6 +59,22 @@ const PRIORITY_COLOR = {
   Medium: "#fb8c00",    // Orange
   Low: "#43a047"        // Green
 };
+
+const GEOFENCE_RADIUS_METERS = 150;
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    });
+  });
+}
 function haversine(a, b) {
   const R = 6371;
   const dLat = (b[0] - a[0]) * Math.PI / 180;
@@ -395,6 +412,13 @@ useEffect(() => {
   const [showTerritories, setShowTerritories] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [geofenceOk, setGeofenceOk] = useState(null);
+  const [checkInDistance, setCheckInDistance] = useState(null);
+  const [checkInError, setCheckInError] = useState("");
+  const [checkInTimestamp, setCheckInTimestamp] = useState(null);
+  const [visitOutcome, setVisitOutcome] = useState(VISIT_OUTCOMES[0]);
+  const [visitNotes, setVisitNotes] = useState("");
+  const [visitFollowUp, setVisitFollowUp] = useState("");
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [route, setRoute] = useState(null);
   const [routeTerritory, setRouteTerritory] = useState('');
 const territoryOptions = [
@@ -823,7 +847,7 @@ const aiOpportunities = [...records]
 
   function openRecord(r) {
     setSelectedId(r.id);
-    setGeofenceOk(null);
+    resetCheckInState();
   }
 
 const aiRecommendations = aiOpportunities
@@ -1123,20 +1147,39 @@ async function checkIn() {
 
     if (!selected) return;
 
+    setCheckInError("");
+
     try {
 
         console.log(
-            "📍 Checking in to:",
+            "📍 Requesting device location for check-in to:",
             selected.name
         );
 
-        // For now, use the selected account location
-        // as the successful geofence verification.
-        setGeofenceOk(true);
+        const position = await getCurrentPosition();
+        const { latitude, longitude } = position.coords;
+
+        if (selected.lat == null || selected.lng == null) {
+            setCheckInError("This record has no saved location to verify your position against.");
+            setGeofenceOk(false);
+            return;
+        }
+
+        const distanceMeters = haversine(
+            [latitude, longitude],
+            [selected.lat, selected.lng]
+        ) * 1000;
+
+        setCheckInDistance(distanceMeters);
+        setCheckInTimestamp(new Date().toISOString());
+
+        const withinGeofence = distanceMeters <= GEOFENCE_RADIUS_METERS;
+
+        setGeofenceOk(withinGeofence);
 
         console.log(
-            "🟢 Geofence verified for:",
-            selected.name
+            withinGeofence ? "🟢 Within geofence" : "🔴 Outside geofence",
+            "- distance:", Math.round(distanceMeters), "m"
         );
 
     } catch (error) {
@@ -1146,15 +1189,38 @@ async function checkIn() {
             error
         );
 
+        if (error.code === 1) {
+            setCheckInError("Location permission denied. Enable GPS access in your browser and retry.");
+        } else if (error.code === 2) {
+            setCheckInError("Unable to determine your location. Move to an open area and retry.");
+        } else if (error.code === 3) {
+            setCheckInError("Location request timed out. Try again.");
+        } else {
+            setCheckInError(error.message || "Unable to verify your location.");
+        }
+
         setGeofenceOk(false);
     }
 }
+
+function resetCheckInState() {
+    setGeofenceOk(null);
+    setCheckInDistance(null);
+    setCheckInError("");
+    setCheckInTimestamp(null);
+    setVisitOutcome(VISIT_OUTCOMES[0]);
+    setVisitNotes("");
+    setVisitFollowUp("");
+}
+
 async function checkOut() {
 
     if (!selected) {
         console.warn("No account/lead selected");
         return;
     }
+
+    setCheckoutSubmitting(true);
 
     try {
 
@@ -1163,19 +1229,10 @@ async function checkOut() {
             selected.name
         );
 
-        console.log(
-            "Selected ID:",
-            selected.id
-        );
-
-        console.log(
-            "Selected Type:",
-            selected.type
-        );
-
         const today = new Date()
             .toISOString()
             .split("T")[0];
+        const now = new Date().toISOString();
 
         let result;
 
@@ -1235,16 +1292,33 @@ async function checkOut() {
             return;
         }
 
+        // Real Field_Visit__c record - check-in/out time, geofence-verified
+        // outcome and notes captured on-site, not a hardcoded pass.
+        await createFieldVisit({
+            Name: `${selected.name} - ${today}`,
+            Account__c: selected.type === "lead" ? null : selected.id,
+            Lead__c: selected.type === "lead" ? selected.id : null,
+            Visit_Date__c: now,
+            Check_In_Time__c: checkInTimestamp,
+            Check_Out_Time__c: now,
+            Visit_Outcome__c: visitOutcome,
+            Notes__c: visitNotes.trim() || null,
+            Follow_up_Date__c: visitFollowUp || null
+        });
+
         console.log(
             "✅ Visit completed successfully:",
             selected.name
         );
 
-        await loadAccounts();
+        await Promise.all([
+            loadAccounts(),
+            loadLeads()
+        ]);
 
         setSelectedId(selected.id);
 
-        setGeofenceOk(null);
+        resetCheckInState();
 
     } catch (error) {
 
@@ -1252,6 +1326,10 @@ async function checkOut() {
             "❌ Check-out error:",
             error
         );
+
+    } finally {
+
+        setCheckoutSubmitting(false);
 
     }
 }
@@ -5008,15 +5086,53 @@ style={{
                     )}
                     {geofenceOk === true && (
                       <>
-                        <div style={{ color: '#2E8B57', fontWeight: 700 }}>✓ Within 150m geofence</div>
-                        <button onClick={checkOut} style={{ padding: '8px', fontWeight: 700, border: 'none', borderRadius: '5px', background: '#0B2E4F', color: '#fff', cursor: 'pointer' }}>
-                          Check out & complete visit
+                        <div style={{ color: '#2E8B57', fontWeight: 700 }}>
+                          ✓ {checkInDistance != null ? `${Math.round(checkInDistance)}m from location` : "Location verified"} — within {GEOFENCE_RADIUS_METERS}m geofence
+                        </div>
+
+                        <label style={{ fontSize: '11px', fontWeight: 600, marginTop: '4px' }}>Outcome</label>
+                        <select
+                          value={visitOutcome}
+                          onChange={e => setVisitOutcome(e.target.value)}
+                          style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px' }}
+                        >
+                          {VISIT_OUTCOMES.map(outcome => (
+                            <option key={outcome} value={outcome}>{outcome}</option>
+                          ))}
+                        </select>
+
+                        <label style={{ fontSize: '11px', fontWeight: 600 }}>Notes</label>
+                        <textarea
+                          value={visitNotes}
+                          onChange={e => setVisitNotes(e.target.value)}
+                          rows={2}
+                          style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px', resize: 'vertical' }}
+                        />
+
+                        <label style={{ fontSize: '11px', fontWeight: 600 }}>Follow-up Date (optional)</label>
+                        <input
+                          type="date"
+                          value={visitFollowUp}
+                          onChange={e => setVisitFollowUp(e.target.value)}
+                          style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px' }}
+                        />
+
+                        <button
+                          onClick={checkOut}
+                          disabled={checkoutSubmitting}
+                          style={{ padding: '8px', fontWeight: 700, border: 'none', borderRadius: '5px', background: checkoutSubmitting ? '#9aa8b5' : '#0B2E4F', color: '#fff', cursor: checkoutSubmitting ? 'default' : 'pointer' }}
+                        >
+                          {checkoutSubmitting ? "Saving..." : "Check out & complete visit"}
                         </button>
                       </>
                     )}
                     {geofenceOk === false && (
                       <>
-                        <div style={{ color: '#C1443C', fontWeight: 700 }}>⚠ Outside geofence — move closer and retry</div>
+                        <div style={{ color: '#C1443C', fontWeight: 700 }}>
+                          {checkInError
+                            ? `⚠ ${checkInError}`
+                            : `⚠ Outside geofence — ${checkInDistance != null ? `${Math.round(checkInDistance)}m away, ` : ""}move closer and retry`}
+                        </div>
                         <button onClick={checkIn} style={{ padding: '8px', fontWeight: 700, border: '1px solid #ccc', borderRadius: '5px', background: '#fff', cursor: 'pointer' }}>
                           Retry check-in
                         </button>

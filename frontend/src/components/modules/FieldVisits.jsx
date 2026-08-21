@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getFieldVisits, createFieldVisit } from "../../services/salesforceApi";
 
-const VISIT_OUTCOMES = [
+export const VISIT_OUTCOMES = [
     "Successful Meeting",
     "Customer Interested",
     "Follow-up Required",
@@ -15,6 +15,45 @@ const VISIT_OUTCOMES = [
     "Closed Permanently",
     "No Response"
 ];
+
+const OUTCOME_COLORS = {
+    "Successful Meeting": { bg: "#e8f5e9", color: "#2e7d32" },
+    "Opportunity Created": { bg: "#e8f5e9", color: "#2e7d32" },
+    "Lead Qualified": { bg: "#e8f5e9", color: "#2e7d32" },
+    "Customer Interested": { bg: "#e3f2fd", color: "#1565c0" },
+    "Follow-up Required": { bg: "#fff3e0", color: "#ef6c00" },
+    "Visit Rescheduled": { bg: "#fff3e0", color: "#ef6c00" },
+    "Lead Rejected": { bg: "#fdecea", color: "#c62828" },
+    "Closed Permanently": { bg: "#fdecea", color: "#c62828" },
+    "Duplicate Business": { bg: "#fdecea", color: "#c62828" },
+    "Incorrect Location": { bg: "#fdecea", color: "#c62828" }
+};
+
+function OutcomeBadge({ outcome }) {
+
+    if (!outcome) {
+        return <span style={{ color: "#999", fontSize: "12px" }}>-</span>;
+    }
+
+    const colors = OUTCOME_COLORS[outcome] || { bg: "#f0f0f0", color: "#555" };
+
+    return (
+        <span
+            style={{
+                padding: "5px 10px",
+                borderRadius: "15px",
+                background: colors.bg,
+                color: colors.color,
+                fontSize: "12px",
+                fontWeight: "bold",
+                whiteSpace: "nowrap"
+            }}
+        >
+            {outcome}
+        </span>
+    );
+
+}
 
 export default function FieldVisits() {
 
@@ -522,7 +561,7 @@ function formatVisitDate(dateValue) {
                                     textAlign: "left"
                                 }}
                             >
-                                Status
+                                Outcome
                             </th>
 
 
@@ -586,10 +625,7 @@ function formatVisitDate(dateValue) {
 
                                             {
                                                 formatVisitDate(
-                                                visit.Visit_Date__c ||
-                                                visit.Field_Visit_Date__c ||
-                                                visit.VisitDate ||
-                                                visit.visitDate
+                                                    visit.Visit_Date__c
                                                 )
                                             }
 
@@ -604,9 +640,9 @@ function formatVisitDate(dateValue) {
 
                                             {
                                                 visit.Account__r?.Name ||
-                                                visit.Account__c ||
-                                                visit.Account ||
-                                                "-"
+                                                (visit.Lead__r?.Name
+                                                    ? `${visit.Lead__r.Name} (Lead)`
+                                                    : "-")
                                             }
 
                                         </td>
@@ -619,10 +655,8 @@ function formatVisitDate(dateValue) {
                                         >
 
                                             {
-                                                visit.Sales_Representative__r?.Name ||
-                                                visit.Field_Sales_Representative__r?.Name ||
                                                 visit.Representative__r?.Name ||
-                                                "-"
+                                                "Not Assigned"
                                             }
 
                                         </td>
@@ -634,31 +668,7 @@ function formatVisitDate(dateValue) {
                                             }}
                                         >
 
-                                            <span
-                                                style={{
-                                                    padding:
-                                                        "5px 10px",
-                                                    borderRadius:
-                                                        "15px",
-                                                    background:
-                                                        "#e8f5e9",
-                                                    color:
-                                                        "#2e7d32",
-                                                    fontSize:
-                                                        "12px",
-                                                    fontWeight:
-                                                        "bold"
-                                                }}
-                                            >
-
-                                                {
-                                                    visit.Status__c ||
-                                                    visit.Status ||
-                                                    visit.status ||
-                                                    "Active"
-                                                }
-
-                                            </span>
+                                            <OutcomeBadge outcome={visit.Visit_Outcome__c} />
 
                                         </td>
 
