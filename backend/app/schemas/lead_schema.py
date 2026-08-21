@@ -10,7 +10,6 @@ class LeadCreate(BaseModel):
     Email: str | None = None
     Status: str | None = None
 
-
 class LeadUpdate(BaseModel):
     LastName: str | None = None
     Company: str | None = None
