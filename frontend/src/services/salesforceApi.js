@@ -180,6 +180,34 @@ export async function getAllLeads() {
 
 }
 
+// Unlike getTerritories() (GIS-filtered map endpoint - only territories
+// with a saved boundary), this returns every territory record with its
+// status and Coverage_Percentage__c, regardless of whether a boundary
+// has been drawn yet. Used by the Dashboard's territory coverage widget.
+export async function getAllTerritories() {
+
+    try {
+
+        const response = await authFetch(
+            `${BASE_URL}/salesforce/territories`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch territories");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error("Territories API Error:", error);
+
+        return [];
+
+    }
+
+}
+
 export async function getTerritories() {
 
     try {
