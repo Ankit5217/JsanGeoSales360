@@ -46,7 +46,7 @@ export const ROLE_PERMISSIONS = {
         dashboard: true,
         accounts: true,
         leads: true,
-        opportunities: false,
+        opportunities: true,
         discovery: false,
         territories: true,
         routes: true,

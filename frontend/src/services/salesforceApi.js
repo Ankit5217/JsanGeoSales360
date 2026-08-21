@@ -89,6 +89,31 @@ export async function updateLead(leadId, data) {
     return await response.json();
 }
 
+export async function createLead(data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/leads`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to create lead"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function getLeads() {
 
     try {
@@ -869,6 +894,56 @@ export async function createOpportunity(data) {
         throw new Error(
             errorData.detail ||
             "Failed to create opportunity"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function updateOpportunity(opportunityId, data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/opportunities/${opportunityId}`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to update opportunity"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function updateFieldVisit(visitId, data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/visits/${visitId}`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to update field visit"
         );
 
     }

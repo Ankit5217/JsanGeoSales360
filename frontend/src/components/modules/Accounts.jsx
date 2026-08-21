@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAllAccounts, createAccount } from "../../services/salesforceApi";
+import { getAllAccounts, createAccount, updateAccount } from "../../services/salesforceApi";
 
 const ACCOUNT_TYPES = [
     "Prospect",
@@ -18,6 +18,7 @@ export default function Accounts() {
     const [error, setError] = useState("");
 
     const [showForm, setShowForm] = useState(false);
+    const [editingAccountId, setEditingAccountId] = useState(null);
     const [formValues, setFormValues] = useState({
         name: "",
         phone: "",
@@ -129,7 +130,57 @@ export default function Accounts() {
 
     }
 
-    async function handleCreate(e) {
+    function resetForm() {
+
+        setFormValues({
+            name: "",
+            phone: "",
+            type: ACCOUNT_TYPES[0],
+            billingCity: ""
+        });
+
+        setEditingAccountId(null);
+
+    }
+
+    function handleToggleCreate() {
+
+        if (showForm) {
+            handleCancelForm();
+            return;
+        }
+
+        resetForm();
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleStartEdit(account) {
+
+        setEditingAccountId(account.Id);
+
+        setFormValues({
+            name: account.Name || "",
+            phone: account.Phone || "",
+            type: account.Type || ACCOUNT_TYPES[0],
+            billingCity: account.BillingCity || ""
+        });
+
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleCancelForm() {
+
+        resetForm();
+        setFormError("");
+        setShowForm(false);
+
+    }
+
+    async function handleSubmit(e) {
 
         e.preventDefault();
 
@@ -143,19 +194,20 @@ export default function Accounts() {
 
         try {
 
-            await createAccount({
+            const payload = {
                 Name: formValues.name.trim(),
                 Phone: formValues.phone.trim() || null,
                 Type: formValues.type,
                 BillingCity: formValues.billingCity.trim() || null
-            });
+            };
 
-            setFormValues({
-                name: "",
-                phone: "",
-                type: ACCOUNT_TYPES[0],
-                billingCity: ""
-            });
+            if (editingAccountId) {
+                await updateAccount(editingAccountId, payload);
+            } else {
+                await createAccount(payload);
+            }
+
+            resetForm();
 
             setShowForm(false);
 
@@ -163,7 +215,10 @@ export default function Accounts() {
 
         } catch (err) {
 
-            setFormError(err.message || "Failed to create account.");
+            setFormError(
+                err.message ||
+                (editingAccountId ? "Failed to update account." : "Failed to create account.")
+            );
 
         } finally {
 
@@ -305,7 +360,7 @@ export default function Accounts() {
                 </div>
 
                 <button
-                    onClick={() => setShowForm(prev => !prev)}
+                    onClick={handleToggleCreate}
                     style={{
                         padding: "10px 16px",
                         borderRadius: "8px",
@@ -318,7 +373,7 @@ export default function Accounts() {
                         whiteSpace: "nowrap"
                     }}
                 >
-                    {showForm ? "Cancel" : "+ Log New Account"}
+                    {showForm && !editingAccountId ? "Cancel" : "+ Log New Account"}
                 </button>
 
             </div>
@@ -326,7 +381,7 @@ export default function Accounts() {
             {showForm && (
 
                 <form
-                    onSubmit={handleCreate}
+                    onSubmit={handleSubmit}
                     style={{
                         background: "#fff",
                         borderRadius: "10px",
@@ -338,6 +393,12 @@ export default function Accounts() {
                         gap: "14px"
                     }}
                 >
+
+                    {editingAccountId && (
+                        <div style={{ gridColumn: "1 / -1", fontSize: "13px", fontWeight: "bold", color: "#0B2E4F" }}>
+                            Editing: {formValues.name}
+                        </div>
+                    )}
 
                     <div>
                         <label style={fieldLabelStyle}>Name *</label>
@@ -383,7 +444,7 @@ export default function Accounts() {
                         />
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
                         <button
                             type="submit"
                             disabled={formSubmitting}
@@ -401,6 +462,25 @@ export default function Accounts() {
                         >
                             {formSubmitting ? "Saving..." : "Save"}
                         </button>
+                        {editingAccountId && (
+                            <button
+                                type="button"
+                                onClick={handleCancelForm}
+                                style={{
+                                    padding: "10px 16px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #ccc",
+                                    background: "#fff",
+                                    color: "#555",
+                                    fontWeight: "bold",
+                                    fontSize: "13px",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        )}
                     </div>
 
                     {formError && (
@@ -513,6 +593,10 @@ export default function Accounts() {
 
                             <th style={cellStyle}>
                                 Salesforce ID
+                            </th>
+
+                            <th style={cellStyle}>
+                                Actions
                             </th>
 
                         </tr>
@@ -671,6 +755,27 @@ export default function Accounts() {
                                     >
                                         {account.Id ||
                                             "-"}
+                                    </td>
+
+                                    {/* ACTIONS */}
+
+                                    <td style={cellStyle}>
+                                        <button
+                                            onClick={() => handleStartEdit(account)}
+                                            style={{
+                                                padding: "6px 10px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #0B2E4F",
+                                                background: "#fff",
+                                                color: "#0B2E4F",
+                                                fontSize: "12px",
+                                                fontWeight: "bold",
+                                                cursor: "pointer",
+                                                whiteSpace: "nowrap"
+                                            }}
+                                        >
+                                            Edit
+                                        </button>
                                     </td>
 
                                 </tr>

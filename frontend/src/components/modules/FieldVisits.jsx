@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFieldVisits, createFieldVisit } from "../../services/salesforceApi";
+import { getFieldVisits, createFieldVisit, updateFieldVisit } from "../../services/salesforceApi";
 
 export const VISIT_OUTCOMES = [
     "Successful Meeting",
@@ -62,11 +62,13 @@ export default function FieldVisits() {
     const [error, setError] = useState("");
 
     const [showForm, setShowForm] = useState(false);
+    const [editingVisitId, setEditingVisitId] = useState(null);
     const [formValues, setFormValues] = useState({
         name: "",
         visitDate: "",
         outcome: VISIT_OUTCOMES[0],
-        notes: ""
+        notes: "",
+        followUp: ""
     });
     const [formError, setFormError] = useState("");
     const [formSubmitting, setFormSubmitting] = useState(false);
@@ -139,7 +141,79 @@ export default function FieldVisits() {
 
     }
 
-    async function handleCreate(e) {
+    // Visit_Date__c comes back as a full ISO datetime; a datetime-local
+    // input needs "YYYY-MM-DDTHH:mm" with no timezone suffix.
+    function toDatetimeLocalValue(isoString) {
+
+        if (!isoString) {
+            return "";
+        }
+
+        const date = new Date(isoString);
+
+        if (isNaN(date.getTime())) {
+            return "";
+        }
+
+        const pad = n => String(n).padStart(2, "0");
+
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+    }
+
+    function resetForm() {
+
+        setFormValues({
+            name: "",
+            visitDate: "",
+            outcome: VISIT_OUTCOMES[0],
+            notes: "",
+            followUp: ""
+        });
+
+        setEditingVisitId(null);
+
+    }
+
+    function handleToggleCreate() {
+
+        if (showForm) {
+            handleCancelForm();
+            return;
+        }
+
+        resetForm();
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleStartEdit(visit) {
+
+        setEditingVisitId(visit.Id);
+
+        setFormValues({
+            name: visit.Name || "",
+            visitDate: toDatetimeLocalValue(visit.Visit_Date__c),
+            outcome: visit.Visit_Outcome__c || VISIT_OUTCOMES[0],
+            notes: visit.Notes__c || "",
+            followUp: visit.Follow_up_Date__c || ""
+        });
+
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleCancelForm() {
+
+        resetForm();
+        setFormError("");
+        setShowForm(false);
+
+    }
+
+    async function handleSubmit(e) {
 
         e.preventDefault();
 
@@ -153,19 +227,21 @@ export default function FieldVisits() {
 
         try {
 
-            await createFieldVisit({
+            const payload = {
                 Name: formValues.name.trim(),
                 Visit_Date__c: formValues.visitDate || null,
                 Visit_Outcome__c: formValues.outcome,
-                Notes__c: formValues.notes.trim() || null
-            });
+                Notes__c: formValues.notes.trim() || null,
+                Follow_up_Date__c: formValues.followUp || null
+            };
 
-            setFormValues({
-                name: "",
-                visitDate: "",
-                outcome: VISIT_OUTCOMES[0],
-                notes: ""
-            });
+            if (editingVisitId) {
+                await updateFieldVisit(editingVisitId, payload);
+            } else {
+                await createFieldVisit(payload);
+            }
+
+            resetForm();
 
             setShowForm(false);
 
@@ -173,7 +249,10 @@ export default function FieldVisits() {
 
         } catch (err) {
 
-            setFormError(err.message || "Failed to create field visit.");
+            setFormError(
+                err.message ||
+                (editingVisitId ? "Failed to update field visit." : "Failed to create field visit.")
+            );
 
         } finally {
 
@@ -341,7 +420,7 @@ function formatVisitDate(dateValue) {
                 </div>
 
                 <button
-                    onClick={() => setShowForm(prev => !prev)}
+                    onClick={handleToggleCreate}
                     style={{
                         padding: "10px 16px",
                         borderRadius: "8px",
@@ -354,7 +433,7 @@ function formatVisitDate(dateValue) {
                         whiteSpace: "nowrap"
                     }}
                 >
-                    {showForm ? "Cancel" : "+ Log New Field Visit"}
+                    {showForm && !editingVisitId ? "Cancel" : "+ Log New Field Visit"}
                 </button>
 
             </div>
@@ -362,7 +441,7 @@ function formatVisitDate(dateValue) {
             {showForm && (
 
                 <form
-                    onSubmit={handleCreate}
+                    onSubmit={handleSubmit}
                     style={{
                         background: "#fff",
                         borderRadius: "10px",
@@ -374,6 +453,12 @@ function formatVisitDate(dateValue) {
                         gap: "14px"
                     }}
                 >
+
+                    {editingVisitId && (
+                        <div style={{ gridColumn: "1 / -1", fontSize: "13px", fontWeight: "bold", color: "#0B2E4F" }}>
+                            Editing: {formValues.name}
+                        </div>
+                    )}
 
                     <div>
                         <label style={fieldLabelStyle}>Name *</label>
@@ -419,7 +504,17 @@ function formatVisitDate(dateValue) {
                         />
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                    <div>
+                        <label style={fieldLabelStyle}>Follow-up Date</label>
+                        <input
+                            type="date"
+                            value={formValues.followUp}
+                            onChange={e => setFormValues(prev => ({ ...prev, followUp: e.target.value }))}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
                         <button
                             type="submit"
                             disabled={formSubmitting}
@@ -437,6 +532,25 @@ function formatVisitDate(dateValue) {
                         >
                             {formSubmitting ? "Saving..." : "Save"}
                         </button>
+                        {editingVisitId && (
+                            <button
+                                type="button"
+                                onClick={handleCancelForm}
+                                style={{
+                                    padding: "10px 16px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #ccc",
+                                    background: "#fff",
+                                    color: "#555",
+                                    fontWeight: "bold",
+                                    fontSize: "13px",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        )}
                     </div>
 
                     {formError && (
@@ -574,6 +688,15 @@ function formatVisitDate(dateValue) {
                                 Salesforce ID
                             </th>
 
+                            <th
+                                style={{
+                                    padding: "12px",
+                                    textAlign: "left"
+                                }}
+                            >
+                                Actions
+                            </th>
+
                         </tr>
 
                     </thead>
@@ -689,6 +812,29 @@ function formatVisitDate(dateValue) {
                                                 "-"
                                             }
 
+                                        </td>
+
+                                        <td
+                                            style={{
+                                                padding: "12px"
+                                            }}
+                                        >
+                                            <button
+                                                onClick={() => handleStartEdit(visit)}
+                                                style={{
+                                                    padding: "6px 10px",
+                                                    borderRadius: "6px",
+                                                    border: "1px solid #0B2E4F",
+                                                    background: "#fff",
+                                                    color: "#0B2E4F",
+                                                    fontSize: "12px",
+                                                    fontWeight: "bold",
+                                                    cursor: "pointer",
+                                                    whiteSpace: "nowrap"
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
                                         </td>
 
                                     </tr>

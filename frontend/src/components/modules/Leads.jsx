@@ -1,11 +1,33 @@
 import { useEffect, useState } from "react";
-import { getAllLeads } from "../../services/salesforceApi";
+import { getAllLeads, createLead, updateLead } from "../../services/salesforceApi";
+
+// Real Lead.Status picklist values, verified via Salesforce describe -
+// not guessed, since an invalid value is a validation error.
+const LEAD_STATUSES = [
+    "Open - Not Contacted",
+    "Working - Contacted",
+    "Closed - Converted",
+    "Closed - Not Converted"
+];
 
 export default function Leads() {
 
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const [showForm, setShowForm] = useState(false);
+    const [editingLeadId, setEditingLeadId] = useState(null);
+    const [formValues, setFormValues] = useState({
+        lastName: "",
+        firstName: "",
+        company: "",
+        phone: "",
+        email: "",
+        status: LEAD_STATUSES[0]
+    });
+    const [formError, setFormError] = useState("");
+    const [formSubmitting, setFormSubmitting] = useState(false);
 
     const cellStyle = {
         padding: "12px",
@@ -17,61 +39,155 @@ export default function Leads() {
 
     useEffect(() => {
 
-        async function loadLeads() {
-
-            console.log("=== LEADS: START API CALL ===");
-
-            try {
-
-                setLoading(true);
-                setError("");
-
-                const data = await getAllLeads();
-
-                console.log("=== LEADS: API RESPONSE ===");
-                console.log(data);
-
-                if (!Array.isArray(data)) {
-
-                    console.error(
-                        "Leads API did not return an array:",
-                        data
-                    );
-
-                    setLeads([]);
-
-                    setError(
-                        "Invalid lead data received."
-                    );
-
-                    return;
-                }
-
-                setLeads(data);
-
-            } catch (err) {
-
-                console.error(
-                    "❌ Leads loading error:",
-                    err
-                );
-
-                setError(
-                    err.message ||
-                    "Failed to load leads."
-                );
-
-            } finally {
-
-                setLoading(false);
-
-            }
-
-        }
-
         loadLeads();
 
     }, []);
+
+
+    async function loadLeads() {
+
+        try {
+
+            setLoading(true);
+            setError("");
+
+            const data = await getAllLeads();
+
+            if (!Array.isArray(data)) {
+                setLeads([]);
+                setError("Invalid lead data received.");
+                return;
+            }
+
+            setLeads(data);
+
+        } catch (err) {
+
+            setError(err.message || "Failed to load leads.");
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    }
+
+
+    function resetForm() {
+
+        setFormValues({
+            lastName: "",
+            firstName: "",
+            company: "",
+            phone: "",
+            email: "",
+            status: LEAD_STATUSES[0]
+        });
+
+        setEditingLeadId(null);
+
+    }
+
+    function handleToggleCreate() {
+
+        if (showForm) {
+            handleCancelForm();
+            return;
+        }
+
+        resetForm();
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleStartEdit(lead) {
+
+        setEditingLeadId(lead.Id);
+
+        setFormValues({
+            lastName: lead.LastName || "",
+            firstName: lead.FirstName || "",
+            company: lead.Company || "",
+            phone: lead.Phone || "",
+            email: lead.Email || "",
+            status: lead.Status || LEAD_STATUSES[0]
+        });
+
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleCancelForm() {
+
+        resetForm();
+        setFormError("");
+        setShowForm(false);
+
+    }
+
+    function updateFormField(field, value) {
+
+        setFormValues(prev => ({ ...prev, [field]: value }));
+
+    }
+
+    async function handleSubmit(e) {
+
+        e.preventDefault();
+
+        if (!formValues.lastName.trim()) {
+            setFormError("Last name is required.");
+            return;
+        }
+
+        if (!formValues.company.trim()) {
+            setFormError("Company is required.");
+            return;
+        }
+
+        setFormSubmitting(true);
+        setFormError("");
+
+        try {
+
+            const payload = {
+                LastName: formValues.lastName.trim(),
+                Company: formValues.company.trim(),
+                FirstName: formValues.firstName.trim() || null,
+                Phone: formValues.phone.trim() || null,
+                Email: formValues.email.trim() || null,
+                Status: formValues.status
+            };
+
+            if (editingLeadId) {
+                await updateLead(editingLeadId, payload);
+            } else {
+                await createLead(payload);
+            }
+
+            resetForm();
+
+            setShowForm(false);
+
+            await loadLeads();
+
+        } catch (err) {
+
+            setFormError(
+                err.message ||
+                (editingLeadId ? "Failed to update lead." : "Failed to create lead.")
+            );
+
+        } finally {
+
+            setFormSubmitting(false);
+
+        }
+
+    }
 
 
     /*
@@ -167,29 +283,189 @@ export default function Leads() {
 
             <div
                 style={{
-                    marginBottom: "20px"
+                    marginBottom: "20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start"
                 }}
             >
 
-                <h2
-                    style={{
-                        margin: 0,
-                        color: "#0B2E4F"
-                    }}
-                >
-                    Leads
-                </h2>
+                <div>
 
-                <p
+                    <h2
+                        style={{
+                            margin: 0,
+                            color: "#0B2E4F"
+                        }}
+                    >
+                        Leads
+                    </h2>
+
+                    <p
+                        style={{
+                            marginTop: "6px",
+                            color: "#666"
+                        }}
+                    >
+                        Salesforce sales leads
+                    </p>
+
+                </div>
+
+                <button
+                    onClick={handleToggleCreate}
                     style={{
-                        marginTop: "6px",
-                        color: "#666"
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#0B2E4F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
                     }}
                 >
-                    Salesforce sales leads
-                </p>
+                    {showForm && !editingLeadId ? "Cancel" : "+ Log New Lead"}
+                </button>
 
             </div>
+
+            {showForm && (
+
+                <form
+                    onSubmit={handleSubmit}
+                    style={{
+                        background: "#fff",
+                        borderRadius: "10px",
+                        padding: "20px",
+                        marginBottom: "20px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                        gap: "14px"
+                    }}
+                >
+
+                    {editingLeadId && (
+                        <div style={{ gridColumn: "1 / -1", fontSize: "13px", fontWeight: "bold", color: "#0B2E4F" }}>
+                            Editing: {formValues.firstName} {formValues.lastName}
+                        </div>
+                    )}
+
+                    <div>
+                        <label style={fieldLabelStyle}>Last Name *</label>
+                        <input
+                            type="text"
+                            value={formValues.lastName}
+                            onChange={e => updateFormField("lastName", e.target.value)}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>First Name</label>
+                        <input
+                            type="text"
+                            value={formValues.firstName}
+                            onChange={e => updateFormField("firstName", e.target.value)}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Company *</label>
+                        <input
+                            type="text"
+                            value={formValues.company}
+                            onChange={e => updateFormField("company", e.target.value)}
+                            required
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Phone</label>
+                        <input
+                            type="text"
+                            value={formValues.phone}
+                            onChange={e => updateFormField("phone", e.target.value)}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Email</label>
+                        <input
+                            type="email"
+                            value={formValues.email}
+                            onChange={e => updateFormField("email", e.target.value)}
+                            style={fieldInputStyle}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={fieldLabelStyle}>Status</label>
+                        <select
+                            value={formValues.status}
+                            onChange={e => updateFormField("status", e.target.value)}
+                            style={fieldInputStyle}
+                        >
+                            {LEAD_STATUSES.map(status => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
+                        <button
+                            type="submit"
+                            disabled={formSubmitting}
+                            style={{
+                                padding: "10px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                color: "#fff",
+                                fontWeight: "bold",
+                                fontSize: "13px",
+                                cursor: formSubmitting ? "default" : "pointer",
+                                width: "100%"
+                            }}
+                        >
+                            {formSubmitting ? "Saving..." : "Save"}
+                        </button>
+                        {editingLeadId && (
+                            <button
+                                type="button"
+                                onClick={handleCancelForm}
+                                style={{
+                                    padding: "10px 16px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #ccc",
+                                    background: "#fff",
+                                    color: "#555",
+                                    fontWeight: "bold",
+                                    fontSize: "13px",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        )}
+                    </div>
+
+                    {formError && (
+                        <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>
+                            {formError}
+                        </div>
+                    )}
+
+                </form>
+
+            )}
 
 
             {/* SUMMARY */}
@@ -245,7 +521,7 @@ export default function Leads() {
                     style={{
                         width: "100%",
                         borderCollapse: "collapse",
-                        minWidth: "900px"
+                        minWidth: "1000px"
                     }}
                 >
 
@@ -283,6 +559,10 @@ export default function Leads() {
 
                             <th style={cellStyle}>
                                 Salesforce ID
+                            </th>
+
+                            <th style={cellStyle}>
+                                Actions
                             </th>
 
                         </tr>
@@ -424,6 +704,27 @@ export default function Leads() {
                                         {lead.Id || "-"}
                                     </td>
 
+                                    {/* ACTIONS */}
+
+                                    <td style={cellStyle}>
+                                        <button
+                                            onClick={() => handleStartEdit(lead)}
+                                            style={{
+                                                padding: "6px 10px",
+                                                borderRadius: "6px",
+                                                border: "1px solid #0B2E4F",
+                                                background: "#fff",
+                                                color: "#0B2E4F",
+                                                fontSize: "12px",
+                                                fontWeight: "bold",
+                                                cursor: "pointer",
+                                                whiteSpace: "nowrap"
+                                            }}
+                                        >
+                                            Edit
+                                        </button>
+                                    </td>
+
                                 </tr>
 
                             )
@@ -458,3 +759,21 @@ export default function Leads() {
     );
 
 }
+
+
+const fieldLabelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#666",
+    marginBottom: "4px"
+};
+
+const fieldInputStyle = {
+    width: "100%",
+    padding: "8px 10px",
+    borderRadius: "6px",
+    border: "1px solid #ddd",
+    fontSize: "13px",
+    boxSizing: "border-box"
+};

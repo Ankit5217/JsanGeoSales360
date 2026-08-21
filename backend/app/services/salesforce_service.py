@@ -2311,6 +2311,9 @@ def get_successful_meetings():
 ACCOUNT_MAP_FIELDS = """
         Id,
         Name,
+        Phone,
+        Type,
+        BillingCity,
         Location__Latitude__s,
         Location__Longitude__s,
         Sales_Priority__c,
@@ -2955,7 +2958,11 @@ def get_field_visits_map():
         Representative__r.Name,
         Visit_Date__c,
         Visit_Outcome__c,
+        Notes__c,
+        Follow_up_Date__c,
+        Account__c,
         Account__r.Name,
+        Lead__c,
         Lead__r.Name
     FROM Field_Visit__c
     """

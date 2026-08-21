@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
     getOpportunities,
     createOpportunity,
+    updateOpportunity,
     getAllAccounts
 } from "../../services/salesforceApi";
 
@@ -61,6 +62,7 @@ export default function Opportunities() {
     const [error, setError] = useState("");
 
     const [showForm, setShowForm] = useState(false);
+    const [editingOpportunityId, setEditingOpportunityId] = useState(null);
     const [formValues, setFormValues] = useState({
         name: "",
         accountId: "",
@@ -129,7 +131,59 @@ export default function Opportunities() {
 
     }
 
-    async function handleCreate(e) {
+    function resetForm() {
+
+        setFormValues({
+            name: "",
+            accountId: "",
+            stage: OPPORTUNITY_STAGES[0],
+            amount: "",
+            closeDate: ""
+        });
+
+        setEditingOpportunityId(null);
+
+    }
+
+    function handleToggleCreate() {
+
+        if (showForm) {
+            handleCancelForm();
+            return;
+        }
+
+        resetForm();
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleStartEdit(opp) {
+
+        setEditingOpportunityId(opp.id);
+
+        setFormValues({
+            name: opp.name || "",
+            accountId: opp.account_id || "",
+            stage: opp.stage || OPPORTUNITY_STAGES[0],
+            amount: opp.amount != null ? String(opp.amount) : "",
+            closeDate: opp.close_date || ""
+        });
+
+        setFormError("");
+        setShowForm(true);
+
+    }
+
+    function handleCancelForm() {
+
+        resetForm();
+        setFormError("");
+        setShowForm(false);
+
+    }
+
+    async function handleSubmit(e) {
 
         e.preventDefault();
 
@@ -148,21 +202,21 @@ export default function Opportunities() {
 
         try {
 
-            await createOpportunity({
+            const payload = {
                 Name: formValues.name.trim(),
                 StageName: formValues.stage,
                 CloseDate: formValues.closeDate,
                 Amount: formValues.amount ? Number(formValues.amount) : null,
                 AccountId: formValues.accountId || null
-            });
+            };
 
-            setFormValues({
-                name: "",
-                accountId: "",
-                stage: OPPORTUNITY_STAGES[0],
-                amount: "",
-                closeDate: ""
-            });
+            if (editingOpportunityId) {
+                await updateOpportunity(editingOpportunityId, payload);
+            } else {
+                await createOpportunity(payload);
+            }
+
+            resetForm();
 
             setShowForm(false);
 
@@ -170,7 +224,10 @@ export default function Opportunities() {
 
         } catch (err) {
 
-            setFormError(err.message || "Failed to create opportunity.");
+            setFormError(
+                err.message ||
+                (editingOpportunityId ? "Failed to update opportunity." : "Failed to create opportunity.")
+            );
 
         } finally {
 
@@ -243,7 +300,7 @@ export default function Opportunities() {
                 </div>
 
                 <button
-                    onClick={() => setShowForm(prev => !prev)}
+                    onClick={handleToggleCreate}
                     style={{
                         padding: "10px 16px",
                         borderRadius: "8px",
@@ -256,14 +313,14 @@ export default function Opportunities() {
                         whiteSpace: "nowrap"
                     }}
                 >
-                    {showForm ? "Cancel" : "+ Log New Opportunity"}
+                    {showForm && !editingOpportunityId ? "Cancel" : "+ Log New Opportunity"}
                 </button>
             </div>
 
             {showForm && (
 
                 <form
-                    onSubmit={handleCreate}
+                    onSubmit={handleSubmit}
                     style={{
                         background: "#fff",
                         borderRadius: "10px",
@@ -275,6 +332,12 @@ export default function Opportunities() {
                         gap: "14px"
                     }}
                 >
+
+                    {editingOpportunityId && (
+                        <div style={{ gridColumn: "1 / -1", fontSize: "13px", fontWeight: "bold", color: "#0B2E4F" }}>
+                            Editing: {formValues.name}
+                        </div>
+                    )}
 
                     <div>
                         <label style={fieldLabelStyle}>Name *</label>
@@ -339,7 +402,7 @@ export default function Opportunities() {
                         />
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "flex-end" }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
                         <button
                             type="submit"
                             disabled={formSubmitting}
@@ -357,6 +420,25 @@ export default function Opportunities() {
                         >
                             {formSubmitting ? "Saving..." : "Save"}
                         </button>
+                        {editingOpportunityId && (
+                            <button
+                                type="button"
+                                onClick={handleCancelForm}
+                                style={{
+                                    padding: "10px 16px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #ccc",
+                                    background: "#fff",
+                                    color: "#555",
+                                    fontWeight: "bold",
+                                    fontSize: "13px",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap"
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        )}
                     </div>
 
                     {formError && (
@@ -416,6 +498,7 @@ export default function Opportunities() {
                             <th style={{ padding: "12px", textAlign: "left" }}>Amount</th>
                             <th style={{ padding: "12px", textAlign: "left" }}>Close Date</th>
                             <th style={{ padding: "12px", textAlign: "left" }}>Owner</th>
+                            <th style={{ padding: "12px", textAlign: "left" }}>Actions</th>
                         </tr>
                     </thead>
 
@@ -445,6 +528,25 @@ export default function Opportunities() {
 
                                 <td style={{ padding: "12px" }}>
                                     {opp.owner_name || "Not Assigned"}
+                                </td>
+
+                                <td style={{ padding: "12px" }}>
+                                    <button
+                                        onClick={() => handleStartEdit(opp)}
+                                        style={{
+                                            padding: "6px 10px",
+                                            borderRadius: "6px",
+                                            border: "1px solid #0B2E4F",
+                                            background: "#fff",
+                                            color: "#0B2E4F",
+                                            fontSize: "12px",
+                                            fontWeight: "bold",
+                                            cursor: "pointer",
+                                            whiteSpace: "nowrap"
+                                        }}
+                                    >
+                                        Edit
+                                    </button>
                                 </td>
 
                             </tr>
