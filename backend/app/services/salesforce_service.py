@@ -1,4 +1,5 @@
 import logging
+import random
 
 import requests
 from fastapi import HTTPException
@@ -107,6 +108,32 @@ def get_accounts():
 
     return accounts
 
+# The "Log New X" forms never collect a location, so every record they
+# create would otherwise have no coordinates - invisible on the GIS Map
+# and unsearchable there, since both are driven by Location__Latitude__s/
+# Longitude__s. Real geocoding is a separate, bigger feature; until then,
+# a random point within Hyderabad (matching where the rest of this org's
+# real data already sits) keeps every new record visible and searchable.
+HYDERABAD_LAT_RANGE = (17.15, 17.65)
+HYDERABAD_LNG_RANGE = (78.30, 78.70)
+
+def _random_hyderabad_coordinates():
+    lat = round(random.uniform(*HYDERABAD_LAT_RANGE), 5)
+    lng = round(random.uniform(*HYDERABAD_LNG_RANGE), 5)
+    return lat, lng
+
+def _assign_random_location(sobject: str, record_id: str):
+    lat, lng = _random_hyderabad_coordinates()
+
+    sf_request(
+        "PATCH",
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/{sobject}/{record_id}",
+        json={
+            "Location__Latitude__s": lat,
+            "Location__Longitude__s": lng
+        }
+    )
+
 def create_account(account: AccountCreate):
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account"
 
@@ -116,7 +143,11 @@ def create_account(account: AccountCreate):
         json=account.model_dump()
     )
 
-    return response.json()
+    result = response.json()
+
+    _assign_random_location("Account", result["id"])
+
+    return result
 
 def update_account(account_id: str, account: AccountUpdate):
 
@@ -265,7 +296,11 @@ def create_lead(lead: LeadCreate):
         json=lead.model_dump()
     )
 
-    return response.json()
+    result = response.json()
+
+    _assign_random_location("Lead", result["id"])
+
+    return result
 
 # Every Opportunity seeded into this org by Salesforce's demo data is
 # owned by this user ("OrgFarm EPIC"). Same pattern as SAMPLE_LEAD_IDS -
@@ -618,6 +653,8 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
     )
 
     lead_id = lead_response.json()["id"]
+
+    _assign_random_location("Lead", lead_id)
 
     sf_request(
         "PATCH",
