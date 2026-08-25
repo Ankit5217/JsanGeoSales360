@@ -4,7 +4,7 @@ import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
-import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,createFieldVisit,optimizeRoute,getTerritories,updateTerritory,assignTerritories
+import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,getOpportunities,createFieldVisit,optimizeRoute,getTerritories,updateTerritory,assignTerritories
 } from "../services/salesforceApi";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
 import {
@@ -52,6 +52,7 @@ console.log(
   const [liveActivityFeed, setLiveActivityFeed] = useState([]);
   const [leadRecords, setLeadRecords] = useState([]);
   const [opportunityRecords, setOpportunityRecords] = useState([]);
+  const [allOpportunities, setAllOpportunities] = useState([]);
   const [territoryList, setTerritoryList] = useState([]);
   const [boundaryEditTerritoryId, setBoundaryEditTerritoryId] = useState("");
   const [pendingBoundary, setPendingBoundary] = useState(null);
@@ -253,12 +254,32 @@ async function loadTerritories() {
 
 }
 
+// Unlike loadOpportunities() (GIS-filtered, for the map pins), this
+// pulls every real Opportunity with its close date/amount, used only
+// to compute a real Sales Performance Trend instead of fabricated data.
+async function loadAllOpportunities() {
+
+    try {
+
+        const data = await getOpportunities();
+
+        setAllOpportunities(Array.isArray(data) ? data : []);
+
+    } catch (error) {
+
+        console.error("All Opportunities Loading Error:", error);
+
+    }
+
+}
+
 useEffect(() => {
 
         loadAccounts();
         loadLeads();
         loadOpportunities();
         loadTerritories();
+        loadAllOpportunities();
 
 }, []);
 
@@ -522,7 +543,7 @@ const {
     executiveHealthScore,
     executiveStatus,
     executiveColor
-} = computeExecutiveAnalytics(records, territoryOptions);
+} = computeExecutiveAnalytics(records, territoryOptions, allOpportunities);
 
   function openRecord(r) {
     setSelectedId(r.id);
@@ -945,86 +966,25 @@ const exportBusinessData = () => {
     return { stops: route.length, distKm: dist.toFixed(1), etaMin: Math.round(dist / 28 * 60) };
   })() : null;
 
-  const aiActivityFeed = [
+// Was a hardcoded list with fake, frozen "X min ago" timestamps that
+// never changed no matter when the page loaded. Real live activity
+// (with real timestamps) already comes from the WebSocket feed via
+// liveActivityFeed - this fake filler was misleading alongside it, so
+// it's gone; the panel now shows only genuine real-time events.
 
-{
-    time: "2 min ago",
-    icon: "🟢",
-    title: "Account Validated",
-    message: `${
-    records.find(r => r.validation === "Validated")?.name || "Account"
-} successfully validated.`
-},
-
-{
-    time: "5 min ago",
-    icon: "🟡",
-    title: "Revenue Forecast Updated",
-    message: `Forecast increased to ₹${salesForecast.toLocaleString("en-IN")}.`
-},
-
-{
-    time: "8 min ago",
-    icon: "🔵",
-    title: "Route Optimized",
-    message: `${pendingVisits} pending visits optimized by AI.`
-},
-
-{
-    time: "12 min ago",
-    icon: "🔴",
-    title: "High Priority Alert",
-    message: `${attentionRequired} high priority accounts require immediate action.`
-},
-
-{
-    time: "18 min ago",
-    icon: "🟢",
-    title: "Territory Performance",
-    message: `${bestTerritory?.territory} is leading revenue generation.`
-}
-
-];
-
-const aiNotifications = [
-
-{
-    id: 1,
-    type: "critical",
-    title: "Revenue Risk",
-    message: `${attentionRequired} high-priority accounts require immediate action.`,
-    time: "2 min ago",
+// Was a hardcoded list of 4 fixed notifications with fake "X min ago"
+// timestamps and fake unread flags that never actually changed. The
+// same underlying conditions are already computed for real in
+// aiAlerts, so notifications are now derived from that real data
+// instead of being duplicated as static fake entries.
+const aiNotifications = aiAlerts.map((alert, index) => ({
+    id: index,
+    type: alert.type === "danger" ? "critical" : alert.type,
+    title: alert.title,
+    message: alert.message,
+    time: "Just now",
     unread: true
-},
-
-{
-    id: 2,
-    type: "warning",
-    title: "Pending Visits",
-    message: `${pendingVisits} field visits are still pending.`,
-    time: "8 min ago",
-    unread: true
-},
-
-{
-    id: 3,
-    type: "success",
-    title: "Validation Completed",
-    message: `${dashboardStats.completedVisits} accounts successfully validated.`,
-    time: "15 min ago",
-    unread: false
-},
-
-{
-    id: 4,
-    type: "info",
-    title: "Forecast Updated",
-    message: `Predicted revenue updated to ₹${salesForecast.toLocaleString("en-IN")}.`,
-    time: "25 min ago",
-    unread: false
-}
-
-];
+}));
 
 const notificationColors = {
 
@@ -1315,7 +1275,7 @@ const generateExecutiveReport = () => {
 
 const exportAIActivity = () => {
 
-    const rows = aiActivityFeed.map(activity => [
+    const rows = liveActivityFeed.map(activity => [
         activity.time,
         activity.title,
         activity.message
@@ -1616,7 +1576,6 @@ return (
     executiveHealthScore={executiveHealthScore}
     executiveStatus={executiveStatus}
     executiveColor={executiveColor}
-    aiActivityFeed={aiActivityFeed}
     aiNotifications={aiNotifications}
     notificationColors={notificationColors}
     unreadNotifications={unreadNotifications}

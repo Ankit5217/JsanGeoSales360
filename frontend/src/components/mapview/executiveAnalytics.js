@@ -1,14 +1,49 @@
 // Pure derived-analytics computation for the GIS Map view's embedded
-// "AI Executive Dashboard" section. Split out of mapview.jsx (Phase 9) -
-// no behavior change, just moved verbatim into one function.
+// "AI Executive Dashboard" section. Split out of mapview.jsx (Phase 9).
 //
-// NOTE: like the original inline code, this is derived from Accounts
-// (records) only - it does not fold in Leads/Opportunities. That's a
-// pre-existing scope limitation, not something this refactor changes.
+// NOTE: dashboardStats/territoryStats/aiOpportunities/etc. are derived
+// from Accounts (records) only - they do not fold in Leads. That's a
+// pre-existing scope limitation, not something this file changes.
+// salesTrend is the exception: it's computed from real Opportunities
+// (passed in separately) since Accounts have no historical revenue data.
 
 import { calculateAIScore, calculateRevenueRisk, calculateTerritoryScore } from "./mapviewUtils";
 
-export function computeExecutiveAnalytics(records, territoryOptions) {
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Real revenue-over-time trend from Closed Won Opportunities' CloseDate,
+// for the trailing 12 calendar months ending this month. Replaces what
+// used to be a hardcoded, always-identical fake dataset.
+function computeSalesTrend(opportunities, now) {
+
+    const months = [];
+
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+            key: `${d.getFullYear()}-${d.getMonth()}`,
+            month: MONTH_LABELS[d.getMonth()],
+            revenue: 0
+        });
+    }
+
+    const byKey = new Map(months.map(m => [m.key, m]));
+
+    opportunities
+        .filter(o => o.stage === "Closed Won" && o.close_date)
+        .forEach(o => {
+            const closeDate = new Date(o.close_date);
+            const key = `${closeDate.getFullYear()}-${closeDate.getMonth()}`;
+            const bucket = byKey.get(key);
+            if (bucket) {
+                bucket.revenue += o.amount || 0;
+            }
+        });
+
+    return months.map(({ month, revenue }) => ({ month, revenue }));
+}
+
+export function computeExecutiveAnalytics(records, territoryOptions, opportunities = []) {
 
 const dashboardStats = {
 
@@ -230,20 +265,7 @@ const forecastGrowth =
     ).toFixed(1);
 
 
-  const salesTrend = [
-    { month: "Jan", revenue: 250000 },
-    { month: "Feb", revenue: 310000 },
-    { month: "Mar", revenue: 420000 },
-    { month: "Apr", revenue: 390000 },
-    { month: "May", revenue: 520000 },
-    { month: "Jun", revenue: 610000 },
-    { month: "Jul", revenue: 720000 },
-    { month: "Aug", revenue: 680000 },
-    { month: "Sep", revenue: 810000 },
-    { month: "Oct", revenue: 900000 },
-    { month: "Nov", revenue: 980000 },
-    { month: "Dec", revenue: 1100000 }
-];
+  const salesTrend = computeSalesTrend(opportunities, new Date());
 
 const bestTerritory =
     territoryStats.reduce(

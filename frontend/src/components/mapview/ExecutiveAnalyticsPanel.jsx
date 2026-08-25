@@ -72,7 +72,6 @@ export default function ExecutiveAnalyticsPanel({
     executiveHealthScore,
     executiveStatus,
     executiveColor,
-    aiActivityFeed,
     aiNotifications,
     notificationColors,
     unreadNotifications,
@@ -242,10 +241,21 @@ AI Executive Dashboard
     }}
 >
 
-{[
-    ...liveActivityFeed,
-    ...aiActivityFeed
-].slice(0, 10).map((activity, index) => (
+{liveActivityFeed.length === 0 && (
+    <div
+        style={{
+            background: "#f8f9fb",
+            padding: "15px",
+            borderRadius: "10px",
+            color: "#777",
+            fontSize: "13px"
+        }}
+    >
+        No live activity yet - updates appear here in real time as accounts, leads, and field visits change.
+    </div>
+)}
+
+{liveActivityFeed.slice(0, 10).map((activity, index) => (
 
 <div
     key={activity.id || `${activity.title}-${activity.time}-${index}`}
