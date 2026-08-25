@@ -1,5 +1,4 @@
 import logging
-import random
 
 import requests
 from fastapi import HTTPException
@@ -114,13 +113,12 @@ def get_accounts():
 # Longitude__s. Real geocoding is a separate, bigger feature; until then,
 # a random point within Hyderabad (matching where the rest of this org's
 # real data already sits) keeps every new record visible and searchable.
-HYDERABAD_LAT_RANGE = (17.15, 17.65)
-HYDERABAD_LNG_RANGE = (78.30, 78.70)
-
+# The actual range/center/direction-sector logic lives in
+# territory_assignment_service.py, shared with the territory-matching code.
 def _random_hyderabad_coordinates():
-    lat = round(random.uniform(*HYDERABAD_LAT_RANGE), 5)
-    lng = round(random.uniform(*HYDERABAD_LNG_RANGE), 5)
-    return lat, lng
+    from app.services.territory_assignment_service import random_point_in_bbox
+
+    return random_point_in_bbox()
 
 def _assign_random_location(sobject: str, record_id: str):
     lat, lng = _random_hyderabad_coordinates()
@@ -138,19 +136,19 @@ def _assign_random_location(sobject: str, record_id: str):
 
 def _assign_territory_by_point(sobject: str, record_id: str, lat: float, lng: float, territory_field: str):
     """
-    Looks up which saved territory boundary (if any) contains (lat, lng)
-    and writes its Territory_Code__c into `territory_field`. A no-op if
-    no territory has a saved boundary yet, or none covers this point.
+    Looks up which territory (real saved boundary, or failing that the
+    compass-direction sector implied by its own name) contains (lat,
+    lng) and writes its Territory_Code__c into `territory_field`. A
+    no-op if no territory exists yet, or none matches this point.
     """
     from app.services.territory_assignment_service import find_territory_code_for_point
 
     territories = get_territory_assignments()
-    territories_with_boundary = [t for t in territories if t.get("boundary_geojson")]
 
-    if not territories_with_boundary:
+    if not territories:
         return
 
-    code = find_territory_code_for_point(lat, lng, territories_with_boundary)
+    code = find_territory_code_for_point(lat, lng, territories)
 
     if code:
         sf_request(
@@ -163,18 +161,18 @@ def assign_territories_by_boundary():
     """
     Recomputes Territory_ID__c (Account/Lead) / Assigned_Territory__c
     (Discovery Candidate) for every real record that has coordinates,
-    based on which saved territory boundary (if any) now contains that
-    point. Run on demand from the GIS Map after drawing/editing a
-    boundary - existing records aren't reassigned automatically.
+    based on which territory (real saved boundary, or failing that its
+    own compass-direction sector) now contains that point. Run on
+    demand from the GIS Map - existing records aren't reassigned
+    automatically.
     """
     from app.services.territory_assignment_service import find_territory_code_for_point
 
     territories = get_territory_assignments()
-    territories_with_boundary = [t for t in territories if t.get("boundary_geojson")]
 
-    if not territories_with_boundary:
+    if not territories:
         return {
-            "message": "No territory has a saved boundary yet - nothing to assign.",
+            "message": "No territories exist yet - nothing to assign.",
             "accounts_updated": 0,
             "leads_updated": 0,
             "discovery_candidates_updated": 0
@@ -186,7 +184,7 @@ def assign_territories_by_boundary():
             code = find_territory_code_for_point(
                 record.get("Location__Latitude__s"),
                 record.get("Location__Longitude__s"),
-                territories_with_boundary
+                territories
             )
             if code and code != record.get(territory_field):
                 sf_request(
@@ -234,6 +232,85 @@ def assign_territories_by_boundary():
 
     return {
         "message": "Territory assignment complete",
+        "accounts_updated": accounts_updated,
+        "leads_updated": leads_updated,
+        "discovery_candidates_updated": candidates_updated
+    }
+
+def realign_coordinates_to_territories():
+    """
+    For every Account/Lead/Discovery Candidate that already has a
+    territory assigned, replaces its coordinates with a fresh point
+    that actually belongs to that territory (inside its real boundary
+    if it has one, otherwise inside the compass-direction sector its
+    own name implies - see generate_point_for_territory). Coordinates
+    were previously assigned uniformly at random across the whole
+    metro area with no regard for which territory a record ended up
+    in, so a record could be labeled HYD-NORTH while sitting in the
+    southern edge of the box. Doesn't touch records with no territory
+    assigned - nothing to align them to.
+    """
+    from app.services.territory_assignment_service import generate_point_for_territory
+
+    territories = get_territory_assignments()
+
+    def realign(sobject, records, territory_field):
+        updated = 0
+        for record in records:
+            code = record.get(territory_field)
+            if not code:
+                continue
+
+            lat, lng = generate_point_for_territory(code, territories)
+
+            sf_request(
+                "PATCH",
+                f"{INSTANCE_URL}/services/data/v64.0/sobjects/{sobject}/{record['Id']}",
+                json={
+                    "Location__Latitude__s": lat,
+                    "Location__Longitude__s": lng
+                }
+            )
+            updated += 1
+        return updated
+
+    account_query = """
+    SELECT Id, Territory_ID__c
+    FROM Account
+    WHERE Territory_ID__c != NULL
+    """
+    accounts = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(account_query)}"
+    ).json()["records"]
+    accounts_updated = realign("Account", accounts, "Territory_ID__c")
+
+    excluded_ids = ", ".join(f"'{lead_id}'" for lead_id in SAMPLE_LEAD_IDS)
+    lead_query = f"""
+    SELECT Id, Territory_ID__c
+    FROM Lead
+    WHERE Territory_ID__c != NULL
+    AND Id NOT IN ({excluded_ids})
+    """
+    leads = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(lead_query)}"
+    ).json()["records"]
+    leads_updated = realign("Lead", leads, "Territory_ID__c")
+
+    candidate_query = """
+    SELECT Id, Assigned_Territory__c
+    FROM Discovery_Candidate__c
+    WHERE Assigned_Territory__c != NULL
+    """
+    candidates = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(candidate_query)}"
+    ).json()["records"]
+    candidates_updated = realign("Discovery_Candidate__c", candidates, "Assigned_Territory__c")
+
+    return {
+        "message": "Coordinates realigned to match assigned territories",
         "accounts_updated": accounts_updated,
         "leads_updated": leads_updated,
         "discovery_candidates_updated": candidates_updated

@@ -4,7 +4,7 @@ import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
-import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,getOpportunities,createFieldVisit,optimizeRoute,getTerritories,updateTerritory,assignTerritories
+import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,getOpportunities,createFieldVisit,optimizeRoute,getTerritories,updateTerritory,assignTerritories,realignCoordinatesToTerritories
 } from "../services/salesforceApi";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
 import {
@@ -60,6 +60,8 @@ console.log(
   const [boundaryMessage, setBoundaryMessage] = useState("");
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignMessage, setAssignMessage] = useState("");
+  const [realignLoading, setRealignLoading] = useState(false);
+  const [realignMessage, setRealignMessage] = useState("");
       async function loadAccounts() {
 
         try {
@@ -373,6 +375,34 @@ async function handleAssignTerritories() {
     } finally {
 
         setAssignLoading(false);
+
+    }
+
+}
+
+async function handleRealignCoordinates() {
+
+    setRealignLoading(true);
+    setRealignMessage("");
+
+    try {
+
+        const result = await realignCoordinatesToTerritories();
+
+        setRealignMessage(
+            `${result.accounts_updated} accounts, ${result.leads_updated} leads, ` +
+            `${result.discovery_candidates_updated} discovery candidates moved to match their territory.`
+        );
+
+        await Promise.all([loadAccounts(), loadLeads()]);
+
+    } catch (error) {
+
+        setRealignMessage(error.message || "Failed to realign coordinates.");
+
+    } finally {
+
+        setRealignLoading(false);
 
     }
 
@@ -1748,6 +1778,21 @@ return (
         {assignMessage && (
             <div style={{ marginTop: '8px', fontSize: '11px', color: '#0B2E4F' }}>
                 {assignMessage}
+            </div>
+        )}
+
+        <button
+            disabled={realignLoading}
+            onClick={handleRealignCoordinates}
+            style={{ width: '100%', marginTop: '8px', cursor: realignLoading ? 'default' : 'pointer' }}
+            title="Move every account/lead/discovery candidate's map pin so it actually sits inside the territory it's assigned to"
+        >
+            {realignLoading ? "Realigning..." : "Realign Coordinates to Territories"}
+        </button>
+
+        {realignMessage && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#0B2E4F' }}>
+                {realignMessage}
             </div>
         )}
     </>

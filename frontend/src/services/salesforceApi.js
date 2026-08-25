@@ -827,6 +827,29 @@ export async function assignTerritories() {
     return await response.json();
 }
 
+export async function realignCoordinatesToTerritories() {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/territories/realign-coordinates`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to realign coordinates"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function createRoute(data) {
 
     const response = await authFetch(
