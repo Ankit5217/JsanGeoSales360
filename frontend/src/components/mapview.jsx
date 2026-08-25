@@ -312,8 +312,8 @@ function handleCancelBoundaryEdit() {
 
 async function handleSaveBoundary() {
 
-    if (!boundaryEditTerritoryId || !pendingBoundary) {
-        setBoundaryMessage("Draw a polygon on the map first.");
+    if (!boundaryEditTerritoryId) {
+        setBoundaryMessage("Select a territory to edit first.");
         return;
     }
 
@@ -322,11 +322,17 @@ async function handleSaveBoundary() {
 
     try {
 
+        // pendingBoundary is null after deleting a shape with the map's
+        // trash tool - that's a real, valid state (the boundary is being
+        // cleared), not "nothing to save". Sending "" rather than null
+        // matters: the backend uses exclude_none=True on this endpoint,
+        // which would silently drop a null value and leave the old
+        // boundary in place in Salesforce.
         await updateTerritory(boundaryEditTerritoryId, {
-            Boundary_GeoJSON__c: JSON.stringify(pendingBoundary)
+            Boundary_GeoJSON__c: pendingBoundary ? JSON.stringify(pendingBoundary) : ""
         });
 
-        setBoundaryMessage("Boundary saved.");
+        setBoundaryMessage(pendingBoundary ? "Boundary saved." : "Boundary cleared.");
         setBoundaryEditTerritoryId("");
         setPendingBoundary(null);
 
@@ -1749,12 +1755,14 @@ return (
     <div style={{ fontSize: '12px' }}>
         <div style={{ marginBottom: '8px', color: '#555' }}>
             Draw a polygon on the map (use the tools in the top-right
-            corner of the map), then save it.
+            corner of the map), then save it. To remove a boundary, use
+            the trash tool, click the shape, then click its checkmark to
+            confirm - then Save here to make the removal permanent.
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
             <button
-                disabled={boundarySaving || !pendingBoundary}
+                disabled={boundarySaving}
                 onClick={handleSaveBoundary}
                 style={{
                     flex: 1,
@@ -1762,12 +1770,12 @@ return (
                     fontWeight: 700,
                     border: 'none',
                     borderRadius: '5px',
-                    background: (boundarySaving || !pendingBoundary) ? '#9aa8b5' : '#0B2E4F',
+                    background: boundarySaving ? '#9aa8b5' : '#0B2E4F',
                     color: '#fff',
-                    cursor: (boundarySaving || !pendingBoundary) ? 'default' : 'pointer'
+                    cursor: boundarySaving ? 'default' : 'pointer'
                 }}
             >
-                {boundarySaving ? "Saving..." : "Save Boundary"}
+                {boundarySaving ? "Saving..." : pendingBoundary ? "Save Boundary" : "Save (Clear Boundary)"}
             </button>
             <button
                 onClick={handleCancelBoundaryEdit}
