@@ -2444,6 +2444,19 @@ ACCOUNT_MAP_FIELDS = """
         Owner.Name
 """
 
+# Every Account seeded into this org by Salesforce itself (the stock
+# Developer Edition demo companies - Burlington Textiles, United Oil &
+# Gas, University of Arizona, etc., plus "Sample Account for
+# Entitlements") is owned by one of these two system users, never by a
+# real rep. Same exclusion pattern as SAMPLE_OPPORTUNITY_OWNER_ID/
+# SAMPLE_LEAD_IDS - keeps the Accounts list, Dashboard, and exports
+# showing only real GIS accounts without needing an allow-list.
+SAMPLE_ACCOUNT_OWNER_IDS = [SAMPLE_OPPORTUNITY_OWNER_ID, "005gL00000LeaQUQAZ"]
+
+def _account_owner_exclusion():
+    ids = ", ".join(f"'{owner_id}'" for owner_id in SAMPLE_ACCOUNT_OWNER_IDS)
+    return f"OwnerId NOT IN ({ids})"
+
 def get_accounts_map():
 
     query = f"""
@@ -2451,6 +2464,7 @@ def get_accounts_map():
     FROM Account
     WHERE Location__Latitude__s != NULL
     AND Location__Longitude__s != NULL
+    AND {_account_owner_exclusion()}
     """
 
     url = (
@@ -2473,6 +2487,7 @@ def get_all_accounts():
     query = f"""
     SELECT {ACCOUNT_MAP_FIELDS}
     FROM Account
+    WHERE {_account_owner_exclusion()}
     """
 
     url = (
