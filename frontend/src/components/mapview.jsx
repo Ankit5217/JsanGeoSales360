@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
 import { WS_URL } from "../config/apiBase";
 import jsPDF from "jspdf";
-import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
 import {getAccounts,updateAccount,getLeads,updateLead,getOpportunitiesMap,getOpportunities,createFieldVisit,optimizeRoute,getTerritories,updateTerritory,assignTerritories
 } from "../services/salesforceApi";
@@ -2043,12 +2043,17 @@ return (
 <MapContainer
     center={[22.5155, 86.2655]}
     zoom={8}
+    zoomControl={false}
     style={{
         height: "100%",
         width: "100%",
         minHeight: "650px"
     }}
 >
+{/* Default zoom control sits top-left, same corner as the GIS
+    Controls bar above - moved out of its way rather than fighting
+    over the same 12px corner. Bottom-left is otherwise unused. */}
+<ZoomControl position="bottomleft" />
 <TileLayer
     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
     attribution="&copy; OpenStreetMap contributors"
