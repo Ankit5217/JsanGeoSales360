@@ -1,0 +1,2920 @@
+{
+  "info": {
+    "_postman_id": "bb1a9f88-a713-4f76-82cf-63cf8054a1d0",
+    "name": "JSAN GeoSales 360 API",
+    "description": "Postman collection for the JSAN GeoSales 360 backend API (FastAPI). Covers authentication and every Salesforce-backed CRM/GIS endpoint mounted under /salesforce, grouped by resource.\n\nRun \"Auth > Login\" first - its Tests script stores the returned access_token into the {{token}} collection variable, which the collection-level Bearer auth then applies automatically to every other request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticates a user and returns a JWT bearer token. The Tests script below stores the returned access_token into the {{token}} collection variable so every other request in this collection is automatically authenticated afterwards.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login succeeded (200)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"token\", jsonData.access_token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Get Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "accounts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/accounts/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "accounts",
+                "all"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Hyderabad Textiles Pvt Ltd\",\n  \"Phone\": \"+91-40-23456789\",\n  \"Type\": \"Customer\",\n  \"BillingCity\": \"Hyderabad\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/accounts/:account_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "accounts",
+                ":account_id"
+              ],
+              "variable": [
+                {
+                  "key": "account_id",
+                  "value": "001XXXXXXXXXXXXXXX",
+                  "description": "Salesforce Account Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Hyderabad Textiles Pvt Ltd\",\n  \"Phone\": \"+91-40-23456789\",\n  \"Type\": \"Customer\",\n  \"BillingCity\": \"Hyderabad\",\n  \"Last_Visit_Date__c\": \"2026-08-20\",\n  \"GIS_Validation_Status__c\": \"Verified\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/accounts/:account_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "accounts",
+                ":account_id"
+              ],
+              "variable": [
+                {
+                  "key": "account_id",
+                  "value": "001XXXXXXXXXXXXXXX",
+                  "description": "Salesforce Account Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Leads",
+      "item": [
+        {
+          "name": "Get Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/leads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "leads"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Lead",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/leads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "leads"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"LastName\": \"Rao\",\n  \"Company\": \"Deccan Agro Traders\",\n  \"FirstName\": \"Srinivas\",\n  \"Phone\": \"+91-98480-12345\",\n  \"Email\": \"srinivas.rao@deccanagro.example.com\",\n  \"Status\": \"Open - Not Contacted\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Lead",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/leads/:lead_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "leads",
+                ":lead_id"
+              ],
+              "variable": [
+                {
+                  "key": "lead_id",
+                  "value": "00QXXXXXXXXXXXXXXX",
+                  "description": "Salesforce Lead Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"LastName\": \"Rao\",\n  \"Company\": \"Deccan Agro Traders\",\n  \"FirstName\": \"Srinivas\",\n  \"Phone\": \"+91-98480-12345\",\n  \"Email\": \"srinivas.rao@deccanagro.example.com\",\n  \"Status\": \"Working - Contacted\",\n  \"Last_Visit_Date__c\": \"2026-08-20\",\n  \"GIS_Validation_Status__c\": \"Verified\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Lead",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/leads/:lead_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "leads",
+                ":lead_id"
+              ],
+              "variable": [
+                {
+                  "key": "lead_id",
+                  "value": "00QXXXXXXXXXXXXXXX",
+                  "description": "Salesforce Lead Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Opportunities",
+      "item": [
+        {
+          "name": "Get Opportunities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/opportunities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "opportunities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Opportunity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/opportunities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "opportunities"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Hyderabad Textiles - Bulk Fabric Order\",\n  \"StageName\": \"Qualification\",\n  \"CloseDate\": \"2026-09-30\",\n  \"Amount\": 450000.0,\n  \"AccountId\": \"001XXXXXXXXXXXXXXX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Opportunity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/opportunities/:opportunity_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "opportunities",
+                ":opportunity_id"
+              ],
+              "variable": [
+                {
+                  "key": "opportunity_id",
+                  "value": "006XXXXXXXXXXXXXXX",
+                  "description": "Salesforce Opportunity Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Hyderabad Textiles - Bulk Fabric Order\",\n  \"StageName\": \"Negotiation/Review\",\n  \"CloseDate\": \"2026-10-15\",\n  \"Amount\": 520000.0,\n  \"AccountId\": \"001XXXXXXXXXXXXXXX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Opportunity",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/opportunities/:opportunity_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "opportunities",
+                ":opportunity_id"
+              ],
+              "variable": [
+                {
+                  "key": "opportunity_id",
+                  "value": "006XXXXXXXXXXXXXXX",
+                  "description": "Salesforce Opportunity Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Discovery Candidates",
+      "item": [
+        {
+          "name": "Get Discovery Candidates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/discovery-candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "discovery-candidates"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Discovery Candidate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/discovery-candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "discovery-candidates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"DC-Secunderabad-0142\",\n  \"Candidate_Name__c\": \"Anand General Store\",\n  \"Business_Name__c\": \"Anand General Store\",\n  \"Address__c\": \"12-3-45, SP Road, Secunderabad, Telangana\",\n  \"Phone__c\": \"+91-90000-11223\",\n  \"Discovery_Source__c\": \"AI_Discovery\",\n  \"Confidence_Score__c\": 0.82,\n  \"Validation_Status__c\": \"Pending\",\n  \"Review_Status__c\": \"Pending Review\",\n  \"Duplicate_Status__c\": \"Not Checked\",\n  \"Assigned_Territory__c\": \"a01XXXXXXXXXXXXXXX\",\n  \"Assigned_Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Related_Account__c\": null,\n  \"Related_Lead__c\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Discovery Candidate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/discovery-candidates/:candidate_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "discovery-candidates",
+                ":candidate_id"
+              ],
+              "variable": [
+                {
+                  "key": "candidate_id",
+                  "value": "a0BXXXXXXXXXXXXXXX",
+                  "description": "Discovery Candidate (custom object) Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"DC-Secunderabad-0142\",\n  \"Candidate_Name__c\": \"Anand General Store\",\n  \"Business_Name__c\": \"Anand General Store\",\n  \"Address__c\": \"12-3-45, SP Road, Secunderabad, Telangana\",\n  \"Phone__c\": \"+91-90000-11223\",\n  \"Discovery_Source__c\": \"AI_Discovery\",\n  \"Confidence_Score__c\": 0.91,\n  \"Validation_Status__c\": \"Verified\",\n  \"Review_Status__c\": \"Approved\",\n  \"Duplicate_Status__c\": \"Unique\",\n  \"Assigned_Territory__c\": \"a01XXXXXXXXXXXXXXX\",\n  \"Assigned_Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Related_Account__c\": null,\n  \"Related_Lead__c\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Discovery Candidate",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/discovery-candidates/:candidate_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "discovery-candidates",
+                ":candidate_id"
+              ],
+              "variable": [
+                {
+                  "key": "candidate_id",
+                  "value": "a0BXXXXXXXXXXXXXXX",
+                  "description": "Discovery Candidate (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Convert Discovery Candidate To Lead",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/discovery-candidates/:candidate_id/convert-to-lead",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "discovery-candidates",
+                ":candidate_id",
+                "convert-to-lead"
+              ],
+              "variable": [
+                {
+                  "key": "candidate_id",
+                  "value": "a0BXXXXXXXXXXXXXXX",
+                  "description": "Discovery Candidate (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Discovery Candidate Duplicates",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/discovery-candidates/:candidate_id/check-duplicates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "discovery-candidates",
+                ":candidate_id",
+                "check-duplicates"
+              ],
+              "variable": [
+                {
+                  "key": "candidate_id",
+                  "value": "a0BXXXXXXXXXXXXXXX",
+                  "description": "Discovery Candidate (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Territories",
+      "item": [
+        {
+          "name": "Get Territories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Territory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"TER-Hyderabad-North\",\n  \"Territory_Name__c\": \"Hyderabad North\",\n  \"Territory_Code__c\": \"HYD-N-01\",\n  \"Coverage_Percentage__c\": 65.0,\n  \"Status__c\": \"Active\",\n  \"Notes__c\": \"Covers Secunderabad, Kompally and Alwal micro-markets.\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": \"00QXXXXXXXXXXXXXXX\",\n  \"Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Territory_Manager__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Boundary_GeoJSON__c\": \"{\\\"type\\\":\\\"Polygon\\\",\\\"coordinates\\\":[[[78.45,17.45],[78.55,17.45],[78.55,17.55],[78.45,17.55],[78.45,17.45]]]}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Territory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/:territory_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                ":territory_id"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"TER-Hyderabad-North\",\n  \"Territory_Name__c\": \"Hyderabad North\",\n  \"Territory_Code__c\": \"HYD-N-01\",\n  \"Coverage_Percentage__c\": 72.0,\n  \"Status__c\": \"Active\",\n  \"Notes__c\": \"Coverage expanded to include Bowenpally.\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": \"00QXXXXXXXXXXXXXXX\",\n  \"Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Territory_Manager__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Boundary_GeoJSON__c\": \"{\\\"type\\\":\\\"Polygon\\\",\\\"coordinates\\\":[[[78.44,17.44],[78.56,17.44],[78.56,17.56],[78.44,17.56],[78.44,17.44]]]}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Territory",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/:territory_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                ":territory_id"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Accounts By Territory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/:territory_id/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                ":territory_id",
+                "accounts"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Leads By Territory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/:territory_id/leads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                ":territory_id",
+                "leads"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Discovery Candidates By Territory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/:territory_id/discovery-candidates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                ":territory_id",
+                "discovery-candidates"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Routes By Territory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/:territory_id/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                ":territory_id",
+                "routes"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Territories By Boundary",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                "assign"
+              ]
+            },
+            "description": "Runs the boundary-based auto-assignment that maps Accounts, Leads and Discovery Candidates to territories using their GIS coordinates. Takes no request body."
+          },
+          "response": []
+        },
+        {
+          "name": "Realign Coordinates To Territories",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/territories/realign-coordinates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "territories",
+                "realign-coordinates"
+              ]
+            },
+            "description": "Recomputes/nudges record coordinates so they fall within their assigned territory's real boundary/direction. Takes no request body."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Routes",
+      "item": [
+        {
+          "name": "Get Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "routes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "routes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Route_Name__c\": \"Secunderabad AM Route - 26 Aug\",\n  \"Route_Date__c\": \"2026-08-26\",\n  \"Estimated_Time__c\": 180,\n  \"Total_Distance__c\": 42,\n  \"Status__c\": \"Pending\",\n  \"Territory__c\": \"a01XXXXXXXXXXXXXXX\",\n  \"Sales_Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": \"00QXXXXXXXXXXXXXXX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Route",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/routes/:route_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "routes",
+                ":route_id"
+              ],
+              "variable": [
+                {
+                  "key": "route_id",
+                  "value": "a03XXXXXXXXXXXXXXX",
+                  "description": "Route Plan (custom object) Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Route_Name__c\": \"Secunderabad AM Route - 26 Aug\",\n  \"Route_Date__c\": \"2026-08-26\",\n  \"Estimated_Time__c\": 165,\n  \"Total_Distance__c\": 38,\n  \"Status__c\": \"Approved\",\n  \"Territory__c\": \"a01XXXXXXXXXXXXXXX\",\n  \"Sales_Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": \"00QXXXXXXXXXXXXXXX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Route",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/routes/:route_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "routes",
+                ":route_id"
+              ],
+              "variable": [
+                {
+                  "key": "route_id",
+                  "value": "a03XXXXXXXXXXXXXXX",
+                  "description": "Route Plan (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Routes By Representative",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/representatives/:user_id/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "representatives",
+                ":user_id",
+                "routes"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Today's Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/routes/today",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "routes",
+                "today"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Field Visits",
+      "item": [
+        {
+          "name": "Get Visits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Visit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Visit-Anand General Store-26Aug\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": null,\n  \"Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Route_Plan__c\": \"a03XXXXXXXXXXXXXXX\",\n  \"Visit_Date__c\": \"2026-08-26T09:30:00\",\n  \"Check_In_Time__c\": \"2026-08-26T09:32:00\",\n  \"Check_Out_Time__c\": \"2026-08-26T10:05:00\",\n  \"Follow_up_Date__c\": \"2026-09-02\",\n  \"Visit_Outcome__c\": \"Successful\",\n  \"Notes__c\": \"Owner interested in bulk pricing; sent catalog.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Visit",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits/:visit_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits",
+                ":visit_id"
+              ],
+              "variable": [
+                {
+                  "key": "visit_id",
+                  "value": "a04XXXXXXXXXXXXXXX",
+                  "description": "Field Visit (custom object) Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"Visit-Anand General Store-26Aug\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": null,\n  \"Representative__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Route_Plan__c\": \"a03XXXXXXXXXXXXXXX\",\n  \"Visit_Date__c\": \"2026-08-26T09:30:00\",\n  \"Check_In_Time__c\": \"2026-08-26T09:32:00\",\n  \"Check_Out_Time__c\": \"2026-08-26T10:12:00\",\n  \"Follow_up_Date__c\": \"2026-09-05\",\n  \"Visit_Outcome__c\": \"Follow-up Required\",\n  \"Notes__c\": \"Requested a follow-up call after budget approval.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Visit",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits/:visit_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits",
+                ":visit_id"
+              ],
+              "variable": [
+                {
+                  "key": "visit_id",
+                  "value": "a04XXXXXXXXXXXXXXX",
+                  "description": "Field Visit (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Visits By Route",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits/route/:route_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits",
+                "route",
+                ":route_id"
+              ],
+              "variable": [
+                {
+                  "key": "route_id",
+                  "value": "a03XXXXXXXXXXXXXXX",
+                  "description": "Route Plan (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Visits By Representative",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits/representative/:user_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits",
+                "representative",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Visits By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits/date/:visit_date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits",
+                "date",
+                ":visit_date"
+              ],
+              "variable": [
+                {
+                  "key": "visit_date",
+                  "value": "2026-08-20",
+                  "description": "Visit date in YYYY-MM-DD format"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Visits By Outcome",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/visits/outcome/:outcome",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "visits",
+                "outcome",
+                ":outcome"
+              ],
+              "variable": [
+                {
+                  "key": "outcome",
+                  "value": "Successful",
+                  "description": "Visit outcome value, e.g. Successful, Follow-up Required"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Evidence",
+      "item": [
+        {
+          "name": "Get Evidence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"EVID-AnandStore-26Aug\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": null,\n  \"Field_Visit__c\": \"a04XXXXXXXXXXXXXXX\",\n  \"Verified_By__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Evidence_Type__c\": \"Photo\",\n  \"Photo_URL__c\": \"https://storage.jsan-geosales360.example.com/evidence/anand-store-front.jpg\",\n  \"Validation_Date__c\": \"2026-08-26\",\n  \"Status__c\": \"Pending\",\n  \"Remarks__c\": \"Storefront photo confirms business is operational.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Evidence",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/:evidence_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                ":evidence_id"
+              ],
+              "variable": [
+                {
+                  "key": "evidence_id",
+                  "value": "a05XXXXXXXXXXXXXXX",
+                  "description": "Validation Evidence (custom object) Id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Name\": \"EVID-AnandStore-26Aug\",\n  \"Account__c\": \"001XXXXXXXXXXXXXXX\",\n  \"Lead__c\": null,\n  \"Field_Visit__c\": \"a04XXXXXXXXXXXXXXX\",\n  \"Verified_By__c\": \"005XXXXXXXXXXXXXXX\",\n  \"Evidence_Type__c\": \"Photo\",\n  \"Photo_URL__c\": \"https://storage.jsan-geosales360.example.com/evidence/anand-store-front.jpg\",\n  \"Validation_Date__c\": \"2026-08-27\",\n  \"Status__c\": \"Approved\",\n  \"Remarks__c\": \"Verified against GPS check-in location; approved.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Evidence",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/:evidence_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                ":evidence_id"
+              ],
+              "variable": [
+                {
+                  "key": "evidence_id",
+                  "value": "a05XXXXXXXXXXXXXXX",
+                  "description": "Validation Evidence (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence By Visit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/visit/:visit_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                "visit",
+                ":visit_id"
+              ],
+              "variable": [
+                {
+                  "key": "visit_id",
+                  "value": "a04XXXXXXXXXXXXXXX",
+                  "description": "Field Visit (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence By Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/account/:account_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                "account",
+                ":account_id"
+              ],
+              "variable": [
+                {
+                  "key": "account_id",
+                  "value": "001XXXXXXXXXXXXXXX",
+                  "description": "Salesforce Account Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence By Lead",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/lead/:lead_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                "lead",
+                ":lead_id"
+              ],
+              "variable": [
+                {
+                  "key": "lead_id",
+                  "value": "00QXXXXXXXXXXXXXXX",
+                  "description": "Salesforce Lead Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence By Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/status/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                "status",
+                ":status"
+              ],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Approved",
+                  "description": "Status value to filter/update by"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Evidence By Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/evidence/type/:evidence_type",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "evidence",
+                "type",
+                ":evidence_type"
+              ],
+              "variable": [
+                {
+                  "key": "evidence_type",
+                  "value": "Photo",
+                  "description": "Evidence type, e.g. Photo, Signature, Document"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "summary"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Leads By Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/leads/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "leads",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Leads By Source",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/leads/source",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "leads",
+                "source"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Qualified Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/leads/qualified",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "leads",
+                "qualified"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Converted Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/leads/converted",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "leads",
+                "converted"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Monthly Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/leads/monthly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "leads",
+                "monthly"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Total Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/accounts/total",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "accounts",
+                "total"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accounts By Priority",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/accounts/priority/:priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "accounts",
+                "priority",
+                ":priority"
+              ],
+              "variable": [
+                {
+                  "key": "priority",
+                  "value": "High",
+                  "description": "Priority value, e.g. High, Medium, Low"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Accounts By Validation Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/accounts/validation/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "accounts",
+                "validation",
+                ":status"
+              ],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Verified",
+                  "description": "Status value to filter/update by"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recently Visited Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/accounts/recent-visits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "accounts",
+                "recent-visits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Overdue Visit Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/accounts/overdue-visits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "accounts",
+                "overdue-visits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Total Territories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/territories/total",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "territories",
+                "total"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Active Territories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/territories/active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "territories",
+                "active"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inactive Territories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/territories/inactive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "territories",
+                "inactive"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Territories By Manager",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/territories/manager/:user_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "territories",
+                "manager",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Total Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/routes/total",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "routes",
+                "total"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pending Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/routes/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "routes",
+                "pending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approved Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/routes/approved",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "routes",
+                "approved"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rejected Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/routes/rejected",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "routes",
+                "rejected"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Total Route Distance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/routes/distance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "routes",
+                "distance"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Total Route Time",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/routes/time",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "routes",
+                "time"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Total Visits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/visits/total",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "visits",
+                "total"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Today's Visits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/visits/today",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "visits",
+                "today"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Follow-up Visits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/visits/followup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "visits",
+                "followup"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Successful Meetings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/dashboard/visits/successful",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "dashboard",
+                "visits",
+                "successful"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GIS",
+      "item": [
+        {
+          "name": "GIS Accounts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "accounts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Account Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/accounts/:account_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "accounts",
+                ":account_id"
+              ],
+              "variable": [
+                {
+                  "key": "account_id",
+                  "value": "001XXXXXXXXXXXXXXX",
+                  "description": "Salesforce Account Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Accounts By Priority",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/accounts/priority/:priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "accounts",
+                "priority",
+                ":priority"
+              ],
+              "variable": [
+                {
+                  "key": "priority",
+                  "value": "High",
+                  "description": "Priority value, e.g. High, Medium, Low"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Accounts By Validation Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/accounts/validation/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "accounts",
+                "validation",
+                ":status"
+              ],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Verified",
+                  "description": "Status value to filter/update by"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Opportunities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/opportunities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "opportunities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/leads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "leads"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Lead Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/leads/:lead_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "leads",
+                ":lead_id"
+              ],
+              "variable": [
+                {
+                  "key": "lead_id",
+                  "value": "00QXXXXXXXXXXXXXXX",
+                  "description": "Salesforce Lead Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Leads By Priority",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/leads/priority/:priority",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "leads",
+                "priority",
+                ":priority"
+              ],
+              "variable": [
+                {
+                  "key": "priority",
+                  "value": "High",
+                  "description": "Priority value, e.g. High, Medium, Low"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Leads By Validation Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/leads/validation/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "leads",
+                "validation",
+                ":status"
+              ],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Verified",
+                  "description": "Status value to filter/update by"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Discovery Candidates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/discovery",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "discovery"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Discovery Candidate Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/discovery/:candidate_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "discovery",
+                ":candidate_id"
+              ],
+              "variable": [
+                {
+                  "key": "candidate_id",
+                  "value": "a0BXXXXXXXXXXXXXXX",
+                  "description": "Discovery Candidate (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Discovery By Validation Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/discovery/validation/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "discovery",
+                "validation",
+                ":status"
+              ],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Verified",
+                  "description": "Status value to filter/update by"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Discovery By Review Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/discovery/review/:review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "discovery",
+                "review",
+                ":review"
+              ],
+              "variable": [
+                {
+                  "key": "review",
+                  "value": "Approved",
+                  "description": "Review status value, e.g. Approved, Pending Review, Rejected"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Discovery By Source",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/discovery/source/:source",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "discovery",
+                "source",
+                ":source"
+              ],
+              "variable": [
+                {
+                  "key": "source",
+                  "value": "AI_Discovery",
+                  "description": "Discovery source value, e.g. AI_Discovery, Field_Rep_Submission"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Territories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/territories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "territories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Territory Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/territories/:territory_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "territories",
+                ":territory_id"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Territories By Manager",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/territories/manager/:manager_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "territories",
+                "manager",
+                ":manager_id"
+              ],
+              "variable": [
+                {
+                  "key": "manager_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id of the Territory Manager"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Territories By Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/territories/status/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "territories",
+                "status",
+                ":status"
+              ],
+              "variable": [
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "description": "Status value to filter/update by"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Routes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/routes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "routes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Route Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/routes/:route_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "routes",
+                ":route_id"
+              ],
+              "variable": [
+                {
+                  "key": "route_id",
+                  "value": "a03XXXXXXXXXXXXXXX",
+                  "description": "Route Plan (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Routes By Territory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/routes/territory/:territory_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "routes",
+                "territory",
+                ":territory_id"
+              ],
+              "variable": [
+                {
+                  "key": "territory_id",
+                  "value": "a01XXXXXXXXXXXXXXX",
+                  "description": "Territory Assignment (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Routes By Sales Rep",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/routes/sales-rep/:user_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "routes",
+                "sales-rep",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Routes By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/routes/date/:route_date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "routes",
+                "date",
+                ":route_date"
+              ],
+              "variable": [
+                {
+                  "key": "route_date",
+                  "value": "2026-08-20",
+                  "description": "Route date in YYYY-MM-DD format"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Field Visits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/field-visits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "field-visits"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Field Visit Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/field-visits/:visit_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "field-visits",
+                ":visit_id"
+              ],
+              "variable": [
+                {
+                  "key": "visit_id",
+                  "value": "a04XXXXXXXXXXXXXXX",
+                  "description": "Field Visit (custom object) Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Field Visits By Sales Rep",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/field-visits/sales-rep/:user_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "field-visits",
+                "sales-rep",
+                ":user_id"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Field Visits By Date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/field-visits/date/:visit_date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "field-visits",
+                "date",
+                ":visit_date"
+              ],
+              "variable": [
+                {
+                  "key": "visit_date",
+                  "value": "2026-08-20",
+                  "description": "Visit date in YYYY-MM-DD format"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GIS Field Visits By Outcome",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/gis/field-visits/outcome/:outcome",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "gis",
+                "field-visits",
+                "outcome",
+                ":outcome"
+              ],
+              "variable": [
+                {
+                  "key": "outcome",
+                  "value": "Successful",
+                  "description": "Visit outcome value, e.g. Successful, Follow-up Required"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Salesforce Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "users"
+              ]
+            },
+            "description": "ADMIN role only. Returns 403 if the authenticated user's token role is not exactly ADMIN."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/users/:user_id/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "users",
+                ":user_id",
+                "role"
+              ],
+              "variable": [
+                {
+                  "key": "user_id",
+                  "value": "005XXXXXXXXXXXXXXX",
+                  "description": "Salesforce User Id"
+                }
+              ]
+            },
+            "description": "ADMIN role only. Returns 403 if the authenticated user's token role is not exactly ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SALES_REP\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Routing",
+      "item": [
+        {
+          "name": "Optimize Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salesforce/routing/optimize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salesforce",
+                "routing",
+                "optimize"
+              ]
+            },
+            "description": "Computes an optimized visiting order for a list of stops starting from the given point. Not tied to a stored Route Plan record.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stops\": [\n    {\n      \"id\": \"001XXXXXXXXXXXXXXX\",\n      \"name\": \"Anand General Store\",\n      \"lat\": 17.4483,\n      \"lng\": 78.4983\n    },\n    {\n      \"id\": \"001YYYYYYYYYYYYYYY\",\n      \"name\": \"Hyderabad Textiles Pvt Ltd\",\n      \"lat\": 17.4126,\n      \"lng\": 78.4482\n    },\n    {\n      \"id\": \"00QZZZZZZZZZZZZZZZ\",\n      \"name\": \"Deccan Agro Traders\",\n      \"lat\": 17.385,\n      \"lng\": 78.4867\n    }\n  ],\n  \"start\": {\n    \"lat\": 17.4399,\n    \"lng\": 78.4983\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

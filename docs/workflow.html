@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSAN GeoSales 360 — System &amp; Workflow Visualization</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --bg2: #101a30;
+    --card: #16233f;
+    --card2: #1b2c4e;
+    --line: #274069;
+    --text: #e6edf7;
+    --muted: #93a4c3;
+    --blue: #4f8ef7;
+    --teal: #2dd4bf;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --pink: #f472b6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  header {
+    padding: 48px 24px 32px;
+    text-align: center;
+    background: radial-gradient(ellipse at top, rgba(79,142,247,.18), transparent 60%);
+  }
+  header h1 {
+    font-size: 2rem;
+    background: linear-gradient(90deg, var(--blue), var(--teal));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { color: var(--muted); max-width: 760px; margin: 12px auto 0; }
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
+    background: rgba(11,17,32,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line); padding: 10px;
+  }
+  nav a {
+    color: var(--muted); text-decoration: none; font-size: .85rem;
+    padding: 6px 14px; border-radius: 999px; border: 1px solid transparent;
+  }
+  nav a:hover { color: var(--text); border-color: var(--line); background: var(--card); }
+  main { max-width: 1180px; margin: 0 auto; padding: 40px 20px 80px; }
+  section { margin-bottom: 72px; scroll-margin-top: 70px; }
+  h2 {
+    font-size: 1.35rem; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    font-size: .75rem; color: var(--teal); border: 1px solid var(--teal);
+    border-radius: 6px; padding: 2px 8px; letter-spacing: 1px;
+  }
+  .sub { color: var(--muted); font-size: .95rem; margin-bottom: 26px; }
+
+  /* ---------- badges ---------- */
+  .pill {
+    display: inline-block; font-size: .68rem; font-weight: 700;
+    letter-spacing: .8px; padding: 2px 10px; border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .done  { background: rgba(52,211,153,.15); color: var(--green);  border: 1px solid rgba(52,211,153,.4); }
+  .now   { background: rgba(251,191,36,.15); color: var(--amber);  border: 1px solid rgba(251,191,36,.45); }
+  .next  { background: rgba(167,139,250,.15);color: var(--purple); border: 1px solid rgba(167,139,250,.4); }
+
+  /* ---------- generic node card ---------- */
+  .node {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px 16px; position: relative;
+  }
+  .node h3 { font-size: .95rem; margin-bottom: 4px; }
+  .node ul { list-style: none; margin-top: 8px; }
+  .node li {
+    font-size: .78rem; color: var(--muted); padding-left: 14px; position: relative; margin: 3px 0;
+  }
+  .node li::before { content: ""; position: absolute; left: 0; top: .55em;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+  .accent-blue   { border-top: 3px solid var(--blue); }
+  .accent-teal   { border-top: 3px solid var(--teal); }
+  .accent-green  { border-top: 3px solid var(--green); }
+  .accent-amber  { border-top: 3px solid var(--amber); }
+  .accent-purple { border-top: 3px solid var(--purple); }
+  .accent-pink   { border-top: 3px solid var(--pink); }
+  .accent-red    { border-top: 3px solid var(--red); }
+
+  /* ---------- layered architecture ---------- */
+  .arch-layer {
+    border: 1px dashed var(--line); border-radius: 16px;
+    padding: 18px 18px 20px; margin-bottom: 22px; position: relative;
+    background: rgba(255,255,255,.02);
+  }
+  .arch-layer > .layer-label {
+    position: absolute; top: -11px; left: 18px;
+    background: var(--bg); padding: 0 10px;
+    font-size: .72rem; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--teal);
+  }
+  .arch-grid {
+    display: grid; gap: 12px; margin-top: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  .flow-down {
+    text-align: center; color: var(--blue); font-size: 1.2rem; margin: -8px 0 14px;
+  }
+  .ext-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+
+  /* ---------- pipeline ---------- */
+  .pipe { display: flex; flex-direction: column; gap: 0; }
+  .pipe-row { display: grid; grid-template-columns: 46px 1fr; gap: 0; align-items: stretch; }
+  .stage-rail {
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .stage-dot {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78rem; font-weight: 700; color: #08101f;
+  }
+  .stage-line { width: 3px; flex: 1; background: var(--line); min-height: 26px; }
+  .stage-card {
+    margin: 0 0 22px 14px; padding: 16px 18px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .stage-card h3 { font-size: 1rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .stage-card .who {
+    font-size: .7rem; font-weight: 700; color: var(--bg);
+    padding: 2px 9px; border-radius: 999px; letter-spacing: .5px;
+  }
+  .stage-card p { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    font-size: .72rem; color: var(--text);
+    background: var(--card2); border: 1px solid var(--line);
+    padding: 3px 10px; border-radius: 999px;
+  }
+
+  /* ---------- swimlanes ---------- */
+  .swim { overflow-x: auto; }
+  .swim table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  .swim th, .swim td {
+    border: 1px solid var(--line); padding: 9px 12px; font-size: .82rem; text-align: left;
+  }
+  .swim th { background: var(--card2); color: var(--text); }
+  .swim td.role-name { font-weight: 600; white-space: nowrap; }
+  .yes { color: var(--green); font-weight: 700; }
+  .no  { color: var(--red); }
+
+  /* ---------- map layers ---------- */
+  .mapwrap {
+    border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    display: grid; grid-template-columns: 300px 1fr; min-height: 340px;
+  }
+  @media (max-width: 800px) { .mapwrap { grid-template-columns: 1fr; } }
+  .map-side { background: var(--card); padding: 18px; border-right: 1px solid var(--line); }
+  .map-side h3 { font-size: .9rem; margin-bottom: 12px; }
+  .layer-item { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; font-size: .82rem; color: var(--muted); }
+  .layer-swatch { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+  .map-canvas {
+    position: relative; background:
+      repeating-linear-gradient(0deg, transparent 0 39px, rgba(79,142,247,.07) 39px 40px),
+      repeating-linear-gradient(90deg, transparent 0 39px, rgba(79,142,247,.07) 39px 40px),
+      #0d1526;
+  }
+  .territory-poly {
+    position: absolute; inset: 12% 8% 18% 14%;
+    background: rgba(45,212,191,.10); border: 2px dashed rgba(45,212,191,.65);
+    clip-path: polygon(8% 38%, 34% 10%, 74% 18%, 96% 52%, 70% 88%, 28% 82%);
+  }
+  .route-line {
+    position: absolute; left: 18%; top: 30%; width: 58%; height: 42%;
+    border: 3px solid transparent;
+    border-color: var(--pink) var(--pink) transparent transparent;
+    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
+    transform: rotate(-8deg);
+  }
+  .pin { position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
+  .pin-label { position: absolute; font-size: .62rem; color: var(--muted);
+    background: rgba(11,17,32,.85); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+  .rep-dot { position: absolute; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--amber); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(251,191,36,.25); }
+  .geofence { position: absolute; width: 64px; height: 64px; border-radius: 50%;
+    border: 2px dashed rgba(52,211,153,.8); background: rgba(52,211,153,.08); }
+
+  /* ---------- roadmap ---------- */
+  .road { display: grid; gap: 12px; }
+  .road-row {
+    display: grid; grid-template-columns: 130px 1fr; gap: 14px; align-items: start;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px;
+  }
+  .road-phase { font-weight: 700; font-size: .9rem; }
+  .road-phase small { display: block; color: var(--muted); font-weight: 400; font-size: .72rem; }
+  .road-body { font-size: .85rem; color: var(--muted); }
+  .road-body b { color: var(--text); }
+
+  footer { text-align: center; color: var(--muted); font-size: .78rem; padding: 30px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>JSAN GeoSales 360</h1>
+  <p>Geospatial Sales Intelligence platform on top of Salesforce CRM — discovery, territories,
+     optimized routing, GPS-verified field visits and executive analytics, all visualized on one GIS map.</p>
+</header>
+
+<nav>
+  <a href="#architecture">Architecture</a>
+  <a href="#pipeline">Field Workflow</a>
+  <a href="#roles">Roles</a>
+  <a href="#map">GIS Map Hub</a>
+  <a href="#realtime">Realtime</a>
+  <a href="#roadmap">Roadmap</a>
+</nav>
+
+<main>
+
+<!-- ================= 1. ARCHITECTURE ================= -->
+<section id="architecture">
+  <h2><span class="num">01</span> System Architecture — how data moves</h2>
+  <p class="sub">Three tiers: a React SPA, a FastAPI gateway that owns all business logic, and external systems (Salesforce + OpenRouteService). The browser never talks to Salesforce directly.</p>
+
+  <div class="arch-layer">
+    <span class="layer-label">Frontend · React 19 + Vite (port 5173)</span>
+    <div class="arch-grid">
+      <div class="node accent-teal"><h3>Modules (role-gated)</h3>
+        <ul><li>Dashboard · Accounts · Leads</li><li>Opportunities · Discovery</li>
+        <li>Territories · Routes · Field Visits</li><li>Evidence · User Roles</li></ul>
+      </div>
+      <div class="node accent-teal"><h3>GIS Map (Leaflet)</h3>
+        <ul><li>Pins for every object type</li><li>Territory polygons (leaflet-draw)</li>
+        <li>Route polylines · geofences</li><li>Search &amp; layer controls</li></ul>
+      </div>
+      <div class="node accent-teal"><h3>Cross-cutting</h3>
+        <ul><li>AuthContext + JWT session</li><li>Role permission gating</li>
+        <li>Recharts dashboards · jsPDF export</li><li>WebSocket listener (live events)</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-down">&#9660;&nbsp;&nbsp;REST (JSON over HTTPS)&nbsp;&nbsp;&#9660;</div>
+
+  <div class="arch-layer">
+    <span class="layer-label">Backend · FastAPI (JWT-protected)</span>
+    <div class="arch-grid">
+      <div class="node accent-blue"><h3>auth_router</h3>
+        <ul><li>/login &rarr; JWT token</li><li>Users from APP_USERS env</li></ul>
+      </div>
+      <div class="node accent-blue"><h3>salesforce_router</h3>
+        <ul><li>~100+ REST endpoints</li><li>CRUD: accounts, leads, opportunities,</li>
+        <li>candidates, territories, routes, visits, evidence</li>
+        <li>/dashboard/* aggregates · /gis/* geo queries</li></ul>
+      </div>
+      <div class="node accent-purple"><h3>Services (business logic)</h3>
+        <ul><li><b>routing_service</b> — OpenRouteService optimization</li>
+        <li><b>territory_assignment</b> — point-in-polygon</li>
+        <li><b>duplicate_detection</b> — fuzzy matching</li>
+        <li><b>salesforce_service</b> — CRM sync</li></ul>
+      </div>
+      <div class="node accent-amber"><h3>realtime.py</h3>
+        <ul><li>WebSocket hub (/ws)</li><li>Broadcasts visits &amp; account changes</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-down">&#9660;&nbsp;&nbsp;outbound calls&nbsp;&nbsp;&#9660;</div>
+
+  <div class="arch-layer">
+    <span class="layer-label">External systems</span>
+    <div class="ext-grid">
+      <div class="node accent-green"><h3>Salesforce CRM</h3>
+        <ul><li>System of record: Accounts, Leads, Opportunities</li><li>Custom objects for candidates / visits / evidence</li></ul>
+      </div>
+      <div class="node accent-pink"><h3>OpenRouteService</h3>
+        <ul><li>Real driving distances &amp; times</li><li>Multi-stop route optimization</li></ul>
+      </div>
+      <div class="node accent-amber"><h3>Device GPS</h3>
+        <ul><li>Browser geolocation on check-in / out</li><li>Geofence radius validation</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2. PIPELINE ================= -->
+<section id="pipeline">
+  <h2><span class="num">02</span> End-to-End Field Workflow — the core business loop</h2>
+  <p class="sub">Every record flows through this pipeline: unknown market &rarr; discovered candidate &rarr; qualified lead &rarr; opportunity &rarr; visited, evidenced, closed.</p>
+
+  <div class="pipe">
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--purple)">1</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Discover prospects <span class="who" style="background:var(--purple)">GIS Analyst / Manager</span> <span class="pill done">Live</span></h3>
+        <p>Candidates enter from external sources (web research, partner lists) or manual capture. Coordinates are validated against Hyderabad bounds and auto-corrected if missing.</p>
+        <div class="chips"><span class="chip">Discovery module</span><span class="chip">POST /discovery-candidates</span><span class="chip">GIS validation status</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--purple)">2</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Duplicate screening <span class="who" style="background:var(--purple)">System</span> <span class="pill done">Live</span></h3>
+        <p>Fuzzy name/address matching against existing Leads and Accounts flags duplicates before anything pollutes the CRM.</p>
+        <div class="chips"><span class="chip">duplicate_detection.py</span><span class="chip">POST .../check-duplicates</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">3</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Convert candidate &rarr; Lead <span class="who" style="background:var(--blue)">Manager / Analyst</span> <span class="pill done">Live</span></h3>
+        <p>One click creates the Lead in Salesforce carrying validated coordinates, review notes and source metadata.</p>
+        <div class="chips"><span class="chip">POST .../convert-to-lead</span><span class="chip">Leads module</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">4</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Auto territory assignment <span class="who" style="background:var(--blue)">System</span> <span class="pill done">Live</span></h3>
+        <p>Managers draw territory boundaries directly on the GIS map. Every new Account / Lead / Candidate is assigned by point-in-polygon test — no manual tagging.</p>
+        <div class="chips"><span class="chip">Territories module</span><span class="chip">leaflet-draw polygons</span><span class="chip">territory_assignment_service</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--teal)">5</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Qualify &rarr; Opportunity <span class="who" style="background:var(--teal)">Sales Exec / Rep</span> <span class="pill done">Live</span></h3>
+        <p>Contact and qualification happens on the ground; converted Leads become Opportunities tracked through stages toward close.</p>
+        <div class="chips"><span class="chip">Leads &rarr; Opportunities modules</span><span class="chip">Full edit capability</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--pink)">6</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Plan &amp; optimize the day's route <span class="who" style="background:var(--pink)">Field Rep</span> <span class="pill done">Live</span></h3>
+        <p>Pick today's stops inside your territory; OpenRouteService computes real driving order, distance and time — replacing the old simulated routing.</p>
+        <div class="chips"><span class="chip">Routes module</span><span class="chip">GET /routes/today</span><span class="chip">Manager approve / reject</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--green)">7</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>GPS geofence check-in / check-out <span class="who" style="background:var(--green)">Field Rep</span> <span class="pill done">Live</span></h3>
+        <p>Arrive at the stop, browser GPS fixes position; check-in is only accepted within the customer geofence. Check-out records duration. Visit reopens automatically if GIS validation is not &ldquo;Validated&rdquo;.</p>
+        <div class="chips"><span class="chip">FieldVisits module</span><span class="chip">POST /visits</span><span class="chip">WebSocket broadcast &rarr; live dashboard</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--amber)">8</div><div class="stage-line"></div></div>
+      <div class="stage-card">
+        <h3>Capture evidence <span class="who" style="background:var(--amber)">Field Rep</span> <span class="pill done">Live</span></h3>
+        <p>Photos, notes and documents attach to the visit and its Account / Lead with a validation status trail — proof of every meeting.</p>
+        <div class="chips"><span class="chip">Evidence module</span><span class="chip">/evidence/visit/{id}</span></div>
+      </div>
+    </div>
+
+    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">9</div><div class="stage-line" style="background:transparent"></div></div>
+      <div class="stage-card" style="margin-bottom:0">
+        <h3>Measure &amp; act <span class="who" style="background:var(--blue)">Leadership</span> <span class="pill done">Live</span></h3>
+        <p>The Dashboard aggregates all nine modules — pipeline by status/source/month, visit outcomes, overdue accounts, route distance/time, territory activity — plus an Executive Analytics panel. Notifications and the activity feed are driven by real backend events, not mock data.</p>
+        <div class="chips"><span class="chip">/dashboard/* (20+ aggregates)</span><span class="chip">ExecutiveAnalyticsPanel</span><span class="chip">Recharts + PDF export</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= 3. ROLES ================= -->
+<section id="roles">
+  <h2><span class="num">03</span> Who sees what — role-gated access</h2>
+  <p class="sub">Enforced in <code>frontend/src/config/rolePermissions.js</code>; modules render only when permitted (ProtectedModule wrapper).</p>
+  <div class="swim node" style="padding:0">
+    <table>
+      <tr><th>Role</th><th>Dashboard</th><th>Discovery</th><th>Territories</th><th>Routes</th><th>Field Visits</th><th>Evidence</th><th>User Roles</th><th>GIS Map</th></tr>
+      <tr><td class="role-name">Administrator</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td></tr>
+      <tr><td class="role-name">Sales Manager</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="no">&mdash;</td><td class="yes">&#10003;</td></tr>
+      <tr><td class="role-name">Sales Executive</td><td class="yes">&#10003;</td><td class="no">&mdash;</td><td class="no">&mdash;</td><td class="no">&mdash;</td><td class="no">&mdash;</td><td class="no">&mdash;</td><td class="no">&mdash;</td><td class="yes">&#10003;</td></tr>
+      <tr><td class="role-name">Field Sales Rep</td><td class="yes">&#10003;</td><td class="no">&mdash;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="no">&mdash;</td><td class="yes">&#10003;</td></tr>
+      <tr><td class="role-name">GIS Analyst</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="yes">&#10003;</td><td class="no">&mdash;</td><td class="yes">&#10003;</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 4. MAP HUB ================= -->
+<section id="map">
+  <h2><span class="num">04</span> The GIS Map — one canvas, every object</h2>
+  <p class="sub">The map is the product's centerpiece: every module projects its data here as toggleable layers.</p>
+  <div class="mapwrap">
+    <div class="map-side">
+      <h3>Layer control (GIS Controls bar)</h3>
+      <div class="layer-item"><span class="layer-swatch" style="background:#4f8ef7"></span><div><b>Accounts</b> — pins by priority; overdue-visit filtering</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="background:#a78bfa"></span><div><b>Leads</b> — priority &amp; validation filters</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="background:#fbbf24"></span><div><b>Opportunities</b> — deal-stage coloring</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="background:#f472b6"></span><div><b>Discovery candidates</b> — pre-CRM prospects</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="border:2px dashed #2dd4bf;background:transparent"></span><div><b>Territory polygons</b> — draw / edit / delete, persisted</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="background:#f472b6;height:4px;margin-top:8px"></span><div><b>Optimized routes</b> — real ORS paths per rep/day</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="border:2px dashed #34d399;border-radius:50%;background:rgba(52,211,153,.1)"></span><div><b>Geofences</b> — check-in radius around stops</div></div>
+      <div class="layer-item"><span class="layer-swatch" style="background:#fbbf24;border-radius:50%"></span><div><b>Rep live position</b> during visits</div></div>
+    </div>
+    <div class="map-canvas">
+      <div class="territory-poly"></div>
+      <div class="route-line"></div>
+      <span class="pin" style="left:30%;top:35%;background:#4f8ef7"></span><span class="pin-label" style="left:31.5%;top:33%">Account · High</span>
+      <span class="pin" style="left:55%;top:48%;background:#a78bfa"></span><span class="pin-label" style="left:56.5%;top:46%">Lead · Qualified</span>
+      <span class="pin" style="left:44%;top:62%;background:#fbbf24"></span><span class="pin-label" style="left:45.5%;top:60%">Opportunity</span>
+      <span class="pin" style="left:66%;top:30%;background:#f472b6"></span><span class="pin-label" style="left:67.5%;top:28%">Candidate</span>
+      <div class="geofence" style="left:57%;top:40%"></div>
+      <div class="rep-dot" style="left:59.5%;top:43%"></div>
+      <span class="pin-label" style="left:59.5%;top:49%">Rep checked-in</span>
+      <span class="pin-label" style="left:12%;top:86%;font-size:.7rem;color:#2dd4bf">Territory &ldquo;Hyderabad West&rdquo; — drawn boundary, auto-assigns contained records</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5. REALTIME ================= -->
+<section id="realtime">
+  <h2><span class="num">05</span> Realtime event flow</h2>
+  <p class="sub">Write operations push instant updates to every open session — no refresh needed.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+    <div class="node accent-green"><h3>1 · Action happens</h3>
+      <ul><li>Rep checks in at a stop</li><li>Account created / updated</li></ul></div>
+    <div class="node accent-amber"><h3>2 · Router broadcasts</h3>
+      <ul><li>salesforce_router &rarr; realtime.py</li><li>broadcast_event(type, payload)</li></ul></div>
+    <div class="node accent-blue"><h3>3 · All clients update</h3>
+      <ul><li>/ws WebSocket fan-out</li><li>Dashboard counters &amp; notification feed refresh live</li></ul></div>
+  </div>
+</section>
+
+<!-- ================= 6. ROADMAP ================= -->
+<section id="roadmap">
+  <h2><span class="num">06</span> Where we are &amp; where we're going</h2>
+  <p class="sub">Phases 1&ndash;8 shipped; Phase 9 refactor underway. Future items are proposed direction, ready to be re-prioritized.</p>
+
+  <div class="road">
+    <div class="road-row"><div class="road-phase">Phase 1<small><span class="pill done">Done</span></small></div>
+      <div class="road-body"><b>Security first</b> — JWT login, protected routes, role permissions matrix.</div></div>
+    <div class="road-row"><div class="road-phase">Phase 2–3<small><span class="pill done">Done</span></small></div>
+      <div class="road-body"><b>Prospecting engine</b> — Discovery Candidate workflow + fuzzy duplicate detection before CRM entry.</div></div>
+    <div class="road-row"><div class="road-phase">Phase 4–5<small><span class="pill done">Done</span></small></div>
+      <div class="road-body"><b>CRM completeness</b> — Opportunities module end-to-end; GPS geofence check-in/out for Field Visits.</div></div>
+    <div class="road-row"><div class="road-phase">Phase 6–7<small><span class="pill done">Done</span></small></div>
+      <div class="road-body"><b>Spatial intelligence</b> — real OpenRouteService route optimization; drawable territory polygons with point-in-polygon assignment.</div></div>
+    <div class="road-row"><div class="road-phase">Phase 8<small><span class="pill done">Done</span></small></div>
+      <div class="road-body"><b>Single pane of glass</b> — Dashboard aggregating all modules; real notifications/activity feed replacing mocks; demo-data cleanup; persistence bug fixes.</div></div>
+    <div class="road-row"><div class="road-phase">Phase 9<small><span class="pill now">In progress</span></small></div>
+      <div class="road-body"><b>Code health</b> — splitting the 66KB <code>mapview.jsx</code> into focused modules (<code>MapLayers.jsx</code>, <code>mapviewUtils.js</code> done; extract remaining panels, controls and pin-rendering into <code>components/mapview/</code>).</div></div>
+    <div class="road-row"><div class="road-phase">Phase 10+<small><span class="pill next">Planned</span></small></div>
+      <div class="road-body">
+        <b>Proposed next steps:</b>
+        mobile-first / PWA offline mode for reps in low-connectivity areas &nbsp;&middot;&nbsp;
+        automated territory balancing (rebalance by workload &amp; revenue potential) &nbsp;&middot;&nbsp;
+        lead-scoring / best-next-stop recommendations on top of the existing spatial data &nbsp;&middot;&nbsp;
+        live rep location tracking during routes &nbsp;&middot;&nbsp;
+        scheduled executive report emails (PDF export already built).
+      </div></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  JSAN GeoSales 360 &middot; generated workflow visualization &middot; reflects repo state as of Aug 2026 &middot; open this file in any browser
+</footer>
+
+</body>
+</html>
