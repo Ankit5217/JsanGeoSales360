@@ -1,6 +1,7 @@
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.auth import require_role
 from app.realtime import broadcast_event
 from app.services.salesforce_service import update_account
 from app.salesforce_client import get_salesforce_users
@@ -660,11 +661,11 @@ async def update_salesforce_account(
 
     return updated_account
 
-@router.get("/users")
+@router.get("/users", dependencies=[Depends(require_role("Administrator"))])
 def read_salesforce_users():
     return get_salesforce_users()
 
-@router.put("/users/{user_id}/role")
+@router.put("/users/{user_id}/role", dependencies=[Depends(require_role("Administrator"))])
 
 def update_user_role(
     user_id: str,

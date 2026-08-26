@@ -122,3 +122,25 @@ def get_current_user(
         "username": username,
         "role": payload.get("role")
     }
+
+
+def require_role(*allowed_roles: str):
+    """
+    A second Depends() layered on top of get_current_user for endpoints
+    that need real authorization, not just authentication - e.g. managing
+    other users' roles. Every salesforce_router endpoint already requires
+    a valid JWT (see main.py's include_router), but that alone doesn't
+    stop one valid, logged-in user from calling an endpoint meant for a
+    different role.
+    """
+
+    def _check(current_user: dict = Depends(get_current_user)):
+        if current_user.get("role") not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action"
+            )
+
+        return current_user
+
+    return _check

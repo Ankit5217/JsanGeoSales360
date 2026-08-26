@@ -47,7 +47,7 @@ export const ROLE_PERMISSIONS = {
         accounts: true,
         leads: true,
         opportunities: true,
-        discovery: false,
+        discovery: true,
         territories: true,
         routes: true,
         fieldVisits: true,
