@@ -1,12 +1,3 @@
-// import MapView from './components/MapView';
-// import './App.css';
-
-// function App() {
-//   return <MapView />;
-// }
-
-// export default App;
-
 import { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import ModuleRenderer from "./components/ModuleRenderer";
@@ -37,7 +28,9 @@ function AppShell() {
             <div
                 style={{
                     display: "flex",
-                    minHeight: "100vh"
+                    width: "100%",
+                    minHeight: "100vh",
+                    background: "var(--gs-bg)"
                 }}
             >
 
@@ -50,7 +43,8 @@ function AppShell() {
                 <div
                     style={{
                         flex: 1,
-                        minWidth: 0
+                        minWidth: 0,
+                        minHeight: "100vh"
                     }}
                 >
 

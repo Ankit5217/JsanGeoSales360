@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useUser } from "../context/UserContext";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
@@ -19,9 +18,7 @@ import { useRouteGeneration } from "./mapview/useRouteGeneration";
 import { useLiveFeed } from "./mapview/useLiveFeed";
 import { generateExecutiveReport, exportBusinessData, exportAIActivity } from "./mapview/reportExport";
 
-export default function MapView({ activeModule }) {
-  const { currentUser, role, hasPermission } = useUser();
-
+export default function MapView() {
   const {
     records,
     leadRecords,
@@ -198,8 +195,8 @@ export default function MapView({ activeModule }) {
         style={{
             minHeight: "100vh",
             width: "100%",
-            fontFamily: "system-ui, sans-serif",
-            background: "#f4f6f9",
+            fontFamily: "var(--gs-font-body)",
+            background: "var(--gs-bg)",
             overflowX: "hidden",
             boxSizing: "border-box"
         }}
