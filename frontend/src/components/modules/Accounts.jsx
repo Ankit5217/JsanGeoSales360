@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllAccounts, createAccount, updateAccount } from "../../services/salesforceApi";
+import { useUser } from "../../context/UserContext";
 
 const ACCOUNT_TYPES = [
     "Prospect",
@@ -12,6 +13,9 @@ const ACCOUNT_TYPES = [
 ];
 
 export default function Accounts() {
+
+    const { can } = useUser();
+    const canEdit = can("EDIT_ACCOUNTS");
 
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -359,26 +363,28 @@ export default function Accounts() {
 
                 </div>
 
-                <button
-                    onClick={handleToggleCreate}
-                    style={{
-                        padding: "10px 16px",
-                        borderRadius: "8px",
-                        border: "none",
-                        background: "#0B2E4F",
-                        color: "#fff",
-                        fontWeight: "bold",
-                        fontSize: "13px",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap"
-                    }}
-                >
-                    {showForm && !editingAccountId ? "Cancel" : "+ Log New Account"}
-                </button>
+                {canEdit && (
+                    <button
+                        onClick={handleToggleCreate}
+                        style={{
+                            padding: "10px 16px",
+                            borderRadius: "8px",
+                            border: "none",
+                            background: "#0B2E4F",
+                            color: "#fff",
+                            fontWeight: "bold",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap"
+                        }}
+                    >
+                        {showForm && !editingAccountId ? "Cancel" : "+ Log New Account"}
+                    </button>
+                )}
 
             </div>
 
-            {showForm && (
+            {canEdit && showForm && (
 
                 <form
                     onSubmit={handleSubmit}
@@ -595,9 +601,11 @@ export default function Accounts() {
                                 Salesforce ID
                             </th>
 
-                            <th style={cellStyle}>
-                                Actions
-                            </th>
+                            {canEdit && (
+                                <th style={cellStyle}>
+                                    Actions
+                                </th>
+                            )}
 
                         </tr>
 
@@ -759,24 +767,26 @@ export default function Accounts() {
 
                                     {/* ACTIONS */}
 
-                                    <td style={cellStyle}>
-                                        <button
-                                            onClick={() => handleStartEdit(account)}
-                                            style={{
-                                                padding: "6px 10px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #0B2E4F",
-                                                background: "#fff",
-                                                color: "#0B2E4F",
-                                                fontSize: "12px",
-                                                fontWeight: "bold",
-                                                cursor: "pointer",
-                                                whiteSpace: "nowrap"
-                                            }}
-                                        >
-                                            Edit
-                                        </button>
-                                    </td>
+                                    {canEdit && (
+                                        <td style={cellStyle}>
+                                            <button
+                                                onClick={() => handleStartEdit(account)}
+                                                style={{
+                                                    padding: "6px 10px",
+                                                    borderRadius: "6px",
+                                                    border: "1px solid #0B2E4F",
+                                                    background: "#fff",
+                                                    color: "#0B2E4F",
+                                                    fontSize: "12px",
+                                                    fontWeight: "bold",
+                                                    cursor: "pointer",
+                                                    whiteSpace: "nowrap"
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
+                                        </td>
+                                    )}
 
                                 </tr>
 

@@ -661,11 +661,11 @@ async def update_salesforce_account(
 
     return updated_account
 
-@router.get("/users", dependencies=[Depends(require_role("Administrator"))])
+@router.get("/users", dependencies=[Depends(require_role("ADMIN"))])
 def read_salesforce_users():
     return get_salesforce_users()
 
-@router.put("/users/{user_id}/role", dependencies=[Depends(require_role("Administrator"))])
+@router.put("/users/{user_id}/role", dependencies=[Depends(require_role("ADMIN"))])
 
 def update_user_role(
     user_id: str,

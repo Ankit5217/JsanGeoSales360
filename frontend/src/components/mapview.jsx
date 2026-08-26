@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useUser } from "../context/UserContext";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
@@ -19,6 +20,11 @@ import { useLiveFeed } from "./mapview/useLiveFeed";
 import { generateExecutiveReport, exportBusinessData, exportAIActivity } from "./mapview/reportExport";
 
 export default function MapView() {
+  const { can } = useUser();
+  const canManageTerritories = can("MANAGE_TERRITORIES");
+  const canPlanRoutes = can("CREATE_WORK_ORDER") || can("ASSIGN_WORK_ORDER");
+  const canUpdateWorkOrder = can("UPDATE_WORK_ORDER");
+
   const {
     records,
     leadRecords,
@@ -356,6 +362,8 @@ export default function MapView() {
           Show territory boundaries
         </label>
 
+{canManageTerritories && (
+<>
 <h3
     style={{
         borderTop: '1px solid #eee',
@@ -470,7 +478,11 @@ export default function MapView() {
         )}
     </div>
 )}
+</>
+)}
 
+{canPlanRoutes && (
+<>
 <h3
     style={{
         borderTop: '1px solid #eee',
@@ -590,6 +602,8 @@ export default function MapView() {
         </button>
 
     </div>
+)}
+</>
 )}
 
 
@@ -959,7 +973,7 @@ style={{
               <div style={{ marginTop: '14px', padding: '10px', background: '#f6f8fb', borderRadius: '7px', fontSize: '12px' }}>
                 <div style={{ fontWeight: 700, marginBottom: '6px' }}>Field Visit</div>
                 <div>Status: <strong>{selected.visitStatus}</strong></div>
-                {(selected.visitStatus === 'pending' || selected.validation !== 'Validated') && (
+                {canUpdateWorkOrder && (selected.visitStatus === 'pending' || selected.validation !== 'Validated') && (
                   <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
                     {geofenceOk === null && (
                       <button onClick={checkIn} style={{ padding: '8px', fontWeight: 700, border: '1px solid #ccc', borderRadius: '5px', background: '#fff', cursor: 'pointer' }}>

@@ -175,7 +175,7 @@ export default function Sidebar({ activeModule, onModuleChange }) {
                             color: "var(--gs-ink-on-navy-muted)"
                         }}
                     >
-                        {currentUser?.geoSalesRole || "—"}
+                        {currentUser?.roleLabel || "—"}
                     </div>
                 </div>
                 <button

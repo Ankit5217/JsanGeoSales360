@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllLeads, createLead, updateLead } from "../../services/salesforceApi";
+import { useUser } from "../../context/UserContext";
 
 // Real Lead.Status picklist values, verified via Salesforce describe -
 // not guessed, since an invalid value is a validation error.
@@ -11,6 +12,9 @@ const LEAD_STATUSES = [
 ];
 
 export default function Leads() {
+
+    const { can } = useUser();
+    const canEdit = can("EDIT_LEADS");
 
     const [leads, setLeads] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -312,26 +316,28 @@ export default function Leads() {
 
                 </div>
 
-                <button
-                    onClick={handleToggleCreate}
-                    style={{
-                        padding: "10px 16px",
-                        borderRadius: "8px",
-                        border: "none",
-                        background: "#0B2E4F",
-                        color: "#fff",
-                        fontWeight: "bold",
-                        fontSize: "13px",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap"
-                    }}
-                >
-                    {showForm && !editingLeadId ? "Cancel" : "+ Log New Lead"}
-                </button>
+                {canEdit && (
+                    <button
+                        onClick={handleToggleCreate}
+                        style={{
+                            padding: "10px 16px",
+                            borderRadius: "8px",
+                            border: "none",
+                            background: "#0B2E4F",
+                            color: "#fff",
+                            fontWeight: "bold",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap"
+                        }}
+                    >
+                        {showForm && !editingLeadId ? "Cancel" : "+ Log New Lead"}
+                    </button>
+                )}
 
             </div>
 
-            {showForm && (
+            {canEdit && showForm && (
 
                 <form
                     onSubmit={handleSubmit}
@@ -561,9 +567,11 @@ export default function Leads() {
                                 Salesforce ID
                             </th>
 
-                            <th style={cellStyle}>
-                                Actions
-                            </th>
+                            {canEdit && (
+                                <th style={cellStyle}>
+                                    Actions
+                                </th>
+                            )}
 
                         </tr>
 
@@ -706,24 +714,26 @@ export default function Leads() {
 
                                     {/* ACTIONS */}
 
-                                    <td style={cellStyle}>
-                                        <button
-                                            onClick={() => handleStartEdit(lead)}
-                                            style={{
-                                                padding: "6px 10px",
-                                                borderRadius: "6px",
-                                                border: "1px solid #0B2E4F",
-                                                background: "#fff",
-                                                color: "#0B2E4F",
-                                                fontSize: "12px",
-                                                fontWeight: "bold",
-                                                cursor: "pointer",
-                                                whiteSpace: "nowrap"
-                                            }}
-                                        >
-                                            Edit
-                                        </button>
-                                    </td>
+                                    {canEdit && (
+                                        <td style={cellStyle}>
+                                            <button
+                                                onClick={() => handleStartEdit(lead)}
+                                                style={{
+                                                    padding: "6px 10px",
+                                                    borderRadius: "6px",
+                                                    border: "1px solid #0B2E4F",
+                                                    background: "#fff",
+                                                    color: "#0B2E4F",
+                                                    fontSize: "12px",
+                                                    fontWeight: "bold",
+                                                    cursor: "pointer",
+                                                    whiteSpace: "nowrap"
+                                                }}
+                                            >
+                                                Edit
+                                            </button>
+                                        </td>
+                                    )}
 
                                 </tr>
 

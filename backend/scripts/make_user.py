@@ -5,11 +5,10 @@ Usage:
     python backend/scripts/make_user.py <username> <password> <role>
 
 Example:
-    python backend/scripts/make_user.py admin "correct horse battery" Administrator
+    python backend/scripts/make_user.py admin "correct horse battery" ADMIN
 
 Valid roles (must match frontend/src/config/rolePermissions.js):
-    Administrator, Sales Manager, Sales Executive,
-    Field Sales Representative, GIS Analyst
+    ADMIN, SALES_MANAGER, FIELD_USER
 
 Paste the printed JSON object into the APP_USERS array in your .env
 (APP_USERS is a JSON array, so multiple users look like:
@@ -25,11 +24,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.auth import hash_password
 
 VALID_ROLES = {
-    "Administrator",
-    "Sales Manager",
-    "Sales Executive",
-    "Field Sales Representative",
-    "GIS Analyst"
+    "ADMIN",
+    "SALES_MANAGER",
+    "FIELD_USER"
 }
 
 
