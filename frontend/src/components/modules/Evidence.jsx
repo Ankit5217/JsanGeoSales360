@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { getEvidence, createEvidence } from "../../services/salesforceApi";
+import { getEvidence, createEvidence, updateEvidence } from "../../services/salesforceApi";
 import { enqueue } from "../../offline/queue";
+import { useUser } from "../../context/UserContext";
+import { PERMISSIONS } from "../../config/rolePermissions";
 
 const EVIDENCE_TYPES = [
     "Photograph",
@@ -25,7 +27,6 @@ const EMPTY_FORM = {
     photoBase64: "",
     photoFilename: "",
     validationDate: "",
-    status: EVIDENCE_STATUSES[0],
     remarks: ""
 };
 
@@ -73,6 +74,10 @@ function downscalePhoto(file, maxDimension = 1600, quality = 0.8) {
 
 export default function Evidence() {
 
+    const { currentUser, can } = useUser();
+    const canReview = can(PERMISSIONS.REVIEW_EVIDENCE);
+    const canUpload = can(PERMISSIONS.UPLOAD_EVIDENCE);
+
     const [evidence, setEvidence] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -83,6 +88,9 @@ export default function Evidence() {
     const [formSubmitting, setFormSubmitting] = useState(false);
     const [photoProcessing, setPhotoProcessing] = useState(false);
     const [photoError, setPhotoError] = useState("");
+
+    const [reviewingId, setReviewingId] = useState(null);
+    const [reviewError, setReviewError] = useState("");
 
     useEffect(() => {
 
@@ -171,7 +179,9 @@ export default function Evidence() {
             Name: formValues.name.trim(),
             Evidence_Type__c: formValues.type,
             Validation_Date__c: formValues.validationDate || null,
-            Status__c: formValues.status,
+            // New evidence always starts Pending - only Admin/Manager can
+            // move it to Approved/Rejected, via the review actions below.
+            Status__c: EVIDENCE_STATUSES[0],
             Remarks__c: formValues.remarks.trim() || null,
             photo_base64: formValues.photoBase64 || null,
             photo_filename: formValues.photoFilename || null
@@ -213,6 +223,35 @@ export default function Evidence() {
         } finally {
 
             setFormSubmitting(false);
+
+        }
+
+    }
+
+    async function handleReview(item, outcome) {
+
+        setReviewingId(item.id);
+        setReviewError("");
+
+        const stamp = `[${outcome} by ${currentUser?.username || "reviewer"} on ${new Date().toISOString().split("T")[0]}]`;
+        const remarks = [item.remarks, stamp].filter(Boolean).join(" ");
+
+        try {
+
+            await updateEvidence(item.id, {
+                Status__c: outcome,
+                Remarks__c: remarks
+            });
+
+            await loadEvidence();
+
+        } catch (err) {
+
+            setReviewError(err.message || `Failed to mark evidence as ${outcome.toLowerCase()}.`);
+
+        } finally {
+
+            setReviewingId(null);
 
         }
 
@@ -265,24 +304,42 @@ export default function Evidence() {
 
                 </div>
 
-                <button
-                    onClick={() => setShowForm(prev => !prev)}
-                    style={{
-                        padding: "10px 16px",
-                        borderRadius: "8px",
-                        border: "none",
-                        background: "#0B2E4F",
-                        color: "#fff",
-                        fontWeight: "bold",
-                        fontSize: "13px",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap"
-                    }}
-                >
-                    {showForm ? "Cancel" : "+ Log New Evidence"}
-                </button>
+                {canUpload && (
+                    <button
+                        onClick={() => setShowForm(prev => !prev)}
+                        style={{
+                            padding: "10px 16px",
+                            borderRadius: "8px",
+                            border: "none",
+                            background: "#0B2E4F",
+                            color: "#fff",
+                            fontWeight: "bold",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap"
+                        }}
+                    >
+                        {showForm ? "Cancel" : "+ Log New Evidence"}
+                    </button>
+                )}
 
             </div>
+
+            {reviewError && (
+                <div
+                    style={{
+                        marginTop: "16px",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        background: "#FBE9E7",
+                        color: "#C1443C",
+                        fontWeight: 600,
+                        fontSize: "13px"
+                    }}
+                >
+                    {reviewError}
+                </div>
+            )}
 
             {formNotice && !showForm && (
                 <div
@@ -390,19 +447,6 @@ export default function Evidence() {
                             onChange={e => setFormValues(prev => ({ ...prev, validationDate: e.target.value }))}
                             style={fieldInputStyle}
                         />
-                    </div>
-
-                    <div>
-                        <label style={fieldLabelStyle}>Status</label>
-                        <select
-                            value={formValues.status}
-                            onChange={e => setFormValues(prev => ({ ...prev, status: e.target.value }))}
-                            style={fieldInputStyle}
-                        >
-                            {EVIDENCE_STATUSES.map(status => (
-                                <option key={status} value={status}>{status}</option>
-                            ))}
-                        </select>
                     </div>
 
                     <div style={{ gridColumn: "span 2" }}>
@@ -582,6 +626,12 @@ export default function Evidence() {
                                 Salesforce ID
                             </th>
 
+                            {canReview && (
+                                <th style={thStyle}>
+                                    Review
+                                </th>
+                            )}
+
                         </tr>
 
                     </thead>
@@ -709,6 +759,32 @@ export default function Evidence() {
                                         {item.id || "-"}
                                     </td>
 
+
+                                    {/* REVIEW ACTIONS */}
+
+                                    {canReview && (
+                                        <td style={tdStyle}>
+                                            <div style={{ display: "flex", gap: "6px" }}>
+                                                <button
+                                                    type="button"
+                                                    disabled={reviewingId === item.id || item.status === "Approved"}
+                                                    onClick={() => handleReview(item, "Approved")}
+                                                    style={reviewButtonStyle("#2e7d32", reviewingId === item.id || item.status === "Approved")}
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={reviewingId === item.id || item.status === "Rejected"}
+                                                    onClick={() => handleReview(item, "Rejected")}
+                                                    style={reviewButtonStyle("#c62828", reviewingId === item.id || item.status === "Rejected")}
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        </td>
+                                    )}
+
                                 </tr>
 
                             )
@@ -814,6 +890,22 @@ function getStatusStyle(status) {
         borderRadius: "20px",
         fontSize: "12px",
         fontWeight: "600"
+    };
+
+}
+
+
+function reviewButtonStyle(color, disabled) {
+
+    return {
+        padding: "5px 10px",
+        borderRadius: "6px",
+        border: `1px solid ${disabled ? "#ccc" : color}`,
+        background: disabled ? "#f4f4f4" : "#fff",
+        color: disabled ? "#999" : color,
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: disabled ? "default" : "pointer"
     };
 
 }

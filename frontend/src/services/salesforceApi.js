@@ -948,6 +948,31 @@ export async function createEvidence(data) {
     return await response.json();
 }
 
+export async function updateEvidence(evidenceId, data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/evidence/${evidenceId}`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to update evidence"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function getOpportunities() {
 
     try {

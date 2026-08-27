@@ -357,7 +357,10 @@ def create_new_evidence(evidence: ValidationEvidenceCreate):
     return create_evidence(evidence)
 
 
-@router.put("/evidence/{evidence_id}")
+@router.put(
+    "/evidence/{evidence_id}",
+    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
+)
 def update_existing_evidence(
     evidence_id: str,
     evidence: ValidationEvidenceUpdate
