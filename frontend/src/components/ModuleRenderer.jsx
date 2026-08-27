@@ -11,6 +11,7 @@ import Routes from "./modules/Routes";
 import FieldVisits from "./modules/FieldVisits";
 import Evidence from "./modules/Evidence";
 import GISMap from "./modules/GISMap";
+import LiveOps from "./modules/LiveOps";
 
 const MODULE_PERMISSIONS = {
     dashboard: "dashboard",
@@ -23,7 +24,8 @@ const MODULE_PERMISSIONS = {
     fieldVisits: "fieldVisits",
     evidence: "evidence",
     gis: "gis",
-    userRoles: "userRoles"
+    userRoles: "userRoles",
+    liveOps: "liveOps"
 };
 
 const MODULE_COMPONENTS = {
@@ -37,7 +39,8 @@ const MODULE_COMPONENTS = {
     fieldVisits: FieldVisits,
     evidence: Evidence,
     gis: MapView,
-    userRoles: AdminUsers
+    userRoles: AdminUsers,
+    liveOps: LiveOps
 };
 
 function EmptyState({ title, message }) {

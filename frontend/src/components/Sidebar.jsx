@@ -14,6 +14,7 @@ const MODULES = [
     { key: "fieldVisits", label: "Field Visits", icon: "📍", permission: "fieldVisits" },
     { key: "evidence", label: "Evidence", icon: "📷", permission: "evidence" },
     { key: "gis", label: "GIS Map", icon: "🌍", permission: "gis" },
+    { key: "liveOps", label: "Live Ops", icon: "📡", permission: "liveOps" },
     { key: "userRoles", label: "User Roles", icon: "🔐", permission: "userRoles" }
 ];
 

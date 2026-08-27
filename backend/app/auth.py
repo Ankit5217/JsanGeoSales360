@@ -87,6 +87,33 @@ def create_access_token(username: str, role: str) -> str:
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
+def decode_token(token: str):
+    """
+    Shared JWT decode used by both the HTTP auth dependency below and the
+    WebSocket handshake (main.py), which can't use Depends(HTTPBearer) since
+    a browser WebSocket handshake can't carry a custom Authorization header.
+    Returns None on any failure instead of raising - a WS failure means
+    "close the connection", not an HTTP error response.
+    """
+    if not JWT_SECRET_KEY or not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+
+    username = payload.get("sub")
+
+    if not username:
+        return None
+
+    return {
+        "username": username,
+        "role": payload.get("role")
+    }
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
@@ -96,32 +123,16 @@ def get_current_user(
             detail="Server auth is not configured"
         )
 
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            JWT_SECRET_KEY,
-            algorithms=[JWT_ALGORITHM]
-        )
-    except jwt.PyJWTError:
+    user = decode_token(credentials.credentials)
+
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    username = payload.get("sub")
-
-    if not username:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-
-    return {
-        "username": username,
-        "role": payload.get("role")
-    }
+    return user
 
 
 def require_role(*allowed_roles: str):

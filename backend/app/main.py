@@ -1,15 +1,15 @@
 import logging
 import os
 
-from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.realtime import connected_clients
+import json
 
-from app.auth import get_current_user
+from app.auth import get_current_user, decode_token
 from app.routers.auth_router import router as auth_router
 from app.routers.salesforce_router import router as salesforce_router
-from app.realtime import connect_client, disconnect_client
+from app.realtime import connect_client, disconnect_client, broadcast_event, send_to_user, record_position, clear_position
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,67 +116,76 @@ def root():
 # ============================================================
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(default=None)):
 
-    await connect_client(websocket)
+    user = decode_token(token)
+
+    if not user:
+        # A close code sent before the handshake is accepted can't reach the
+        # browser as anything but a generic 1006 abnormal-closure - accept
+        # first so the real 4401 propagates and the frontend's reconnect
+        # logic can tell "bad token" apart from a transient network drop.
+        await websocket.accept()
+        await websocket.close(code=4401)
+        return
+
+    await connect_client(websocket, user)
 
     try:
 
         while True:
 
-            message = await websocket.receive_text()
+            raw_message = await websocket.receive_text()
 
-            logger.debug("WebSocket message: %s", message)
+            try:
+                message = json.loads(raw_message)
+            except (TypeError, ValueError):
+                logger.debug("Ignoring non-JSON WebSocket message: %s", raw_message)
+                continue
+
+            message_type = message.get("type")
+
+            if message_type == "position_update":
+                lat = message.get("lat")
+                lng = message.get("lng")
+
+                if lat is None or lng is None:
+                    continue
+
+                record_position(user["username"], user["role"], lat, lng)
+
+                await broadcast_event(
+                    "rep_position",
+                    {"username": user["username"], "role": user["role"], "lat": lat, "lng": lng},
+                    roles=["ADMIN", "SALES_MANAGER"]
+                )
+
+            elif message_type == "position_stop":
+                await clear_position(user["username"])
+
+            elif message_type == "stop_nudge":
+                if user["role"] not in ("ADMIN", "SALES_MANAGER"):
+                    continue
+
+                target_username = message.get("target_username")
+
+                if not target_username:
+                    continue
+
+                await send_to_user(
+                    target_username,
+                    "stop_nudge",
+                    {
+                        "from": user["username"],
+                        "accountName": message.get("accountName"),
+                        "lat": message.get("lat"),
+                        "lng": message.get("lng")
+                    }
+                )
+
+            else:
+                logger.debug("Ignoring unknown WebSocket message type: %s", message_type)
 
     except WebSocketDisconnect:
 
         await disconnect_client(websocket)
-
-# ============================================================
-# BROADCAST EVENT
-# ============================================================
-
-# async def broadcast_event(
-#     event_type,
-#     data
-# ):
-
-#     message = {
-#         "type": event_type,
-#         "data": data
-#     }
-
-#     disconnected_clients = []
-
-#     for client in connected_clients:
-
-#         try:
-
-#             await client.send_json(message)
-
-#         except Exception:
-
-#             disconnected_clients.append(
-#                 client
-#             )
-
-#     for client in disconnected_clients:
-
-#         connected_clients.discard(
-#             client
-#         )
-
-# @app.post("/test-broadcast")
-# async def test_broadcast():
-#     await broadcast_event(
-#         "test_event",
-#         {
-#             "message": "Hello from JSAN GeoSales 360!",
-#             "source": "FastAPI",
-#             "status": "success"
-#         }
-#     )
-
-#     return {
-#         "status": "broadcast_sent"
-#     }

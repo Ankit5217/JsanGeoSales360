@@ -3,8 +3,11 @@ import Sidebar from "./components/Sidebar";
 import ModuleRenderer from "./components/ModuleRenderer";
 import Login from "./components/Login";
 import OfflineBanner from "./components/OfflineBanner";
+import LocationShareToggle from "./components/LocationShareToggle";
+import StopNudgeToast from "./components/StopNudgeToast";
 import { UserProvider } from "./context/UserContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { RealtimeProvider } from "./realtime/RealtimeContext";
 import { startOfflineSync } from "./offline/syncEngine";
 import useIsMobile from "./hooks/useIsMobile";
 
@@ -19,7 +22,8 @@ const MODULE_LABELS = {
     fieldVisits: "Field Visits",
     evidence: "Evidence",
     gis: "GIS Map",
-    userRoles: "User Roles"
+    userRoles: "User Roles",
+    liveOps: "Live Ops"
 };
 
 
@@ -51,6 +55,8 @@ function AppShell() {
                 (e.g. an expired token mid-sync) must not hide a "sign in
                 again to sync N items" notice along with everything else. */}
             <OfflineBanner />
+            <LocationShareToggle />
+            <StopNudgeToast />
 
             {!isAuthenticated ? (
 
@@ -150,7 +156,9 @@ function App() {
 
     return (
         <AuthProvider>
-            <AppShell />
+            <RealtimeProvider>
+                <AppShell />
+            </RealtimeProvider>
         </AuthProvider>
     );
 

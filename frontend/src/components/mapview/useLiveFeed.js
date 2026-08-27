@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { WS_URL } from "../../config/apiBase";
+import { useRealtime } from "../../realtime/RealtimeContext";
 
-// Real-time WebSocket connection: Salesforce-side changes (field visits,
-// accounts, GIS data) push into the live alert/activity panels instead of
-// requiring a refresh.
+// Salesforce-side changes (field visits, accounts, GIS data) push into the
+// live alert/activity panels instead of requiring a refresh. Consumes the
+// shared app-level WebSocket connection (see realtime/RealtimeContext.jsx)
+// rather than opening its own.
 export function useLiveFeed({ loadAccounts, loadLeads }) {
+  const { subscribe } = useRealtime();
   const [liveAlerts, setLiveAlerts] = useState([]);
   const [liveActivityFeed, setLiveActivityFeed] = useState([]);
 
@@ -33,51 +35,33 @@ export function useLiveFeed({ loadAccounts, loadLeads }) {
   }
 
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
-      console.log("Real-time WebSocket connected");
-    };
-
-    ws.onmessage = async (event) => {
-      const message = JSON.parse(event.data);
-
-      if (message.type === "field_visit_updated") {
+    const unsubscribers = [
+      subscribe("field_visit_updated", async () => {
         await Promise.all([loadAccounts(), loadLeads()]);
         addLiveAlert("success", "Field Visit Updated", "A field visit was updated in Salesforce.");
         addLiveActivity("🟢", "Field Visit Updated", "A field visit was updated in Salesforce.");
-      }
+      }),
 
-      if (message.type === "account_updated") {
+      subscribe("account_updated", async () => {
         await Promise.all([loadAccounts(), loadLeads()]);
         addLiveAlert("info", "Account Updated", "Account information was updated in Salesforce.");
         addLiveActivity("🔵", "Account Updated", "Account information was updated in Salesforce.");
-      }
+      }),
 
-      if (message.type === "gis_updated") {
+      subscribe("gis_updated", async () => {
         await Promise.all([loadAccounts(), loadLeads()]);
         addLiveAlert("warning", "GIS Data Updated", "GIS information was updated.");
         addLiveActivity("🗺️", "GIS Data Updated", "GIS information was updated.");
-      }
+      }),
 
-      if (message.type === "alert") {
-        addLiveAlert("danger", "Real-Time Alert", message.data?.message || "A new real-time alert was received.");
-        addLiveActivity("🚨", "AI Alert", message.data?.message || "A new real-time alert was received.");
-      }
-    };
+      subscribe("alert", (data) => {
+        addLiveAlert("danger", "Real-Time Alert", data?.message || "A new real-time alert was received.");
+        addLiveActivity("🚨", "AI Alert", data?.message || "A new real-time alert was received.");
+      })
+    ];
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }, [subscribe, loadAccounts, loadLeads]);
 
   return { liveAlerts, liveActivityFeed };
 }
