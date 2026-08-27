@@ -1,8 +1,20 @@
 import { useState } from "react";
-import { updateAccount, updateLead, createFieldVisit } from "../../services/salesforceApi";
+import { updateAccount, updateLead, createFieldVisit, createOpportunity } from "../../services/salesforceApi";
 import { VISIT_OUTCOMES } from "../modules/FieldVisits";
+import { OPPORTUNITY_STAGES } from "../modules/Opportunities";
 import { GEOFENCE_RADIUS_METERS, getCurrentPosition, haversine } from "./mapviewUtils";
+import { getStatusForOutcome, isOpportunityOutcome } from "./checkoutOutcome";
 import { enqueue } from "../../offline/queue";
+
+// CloseDate is required by the Opportunity schema but not asked of the rep
+// in the inline checkout form (kept to just name/amount/stage) - 30 days
+// out is a reasonable default they can adjust later from the Opportunities
+// screen.
+function defaultCloseDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().split("T")[0];
+}
 
 // The on-site check-in -> geofence verification -> outcome capture ->
 // check-out flow for a selected Account/Lead, plus the record-selection
@@ -16,6 +28,9 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
   const [visitOutcome, setVisitOutcome] = useState(VISIT_OUTCOMES[0]);
   const [visitNotes, setVisitNotes] = useState("");
   const [visitFollowUp, setVisitFollowUp] = useState("");
+  const [dealName, setDealName] = useState("");
+  const [dealAmount, setDealAmount] = useState("");
+  const [dealStage, setDealStage] = useState(OPPORTUNITY_STAGES[0]);
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   // 'idle' | 'submitting' | 'queued' | 'error' - queued means it's saved to
   // the offline queue and will sync automatically, not a failure.
@@ -32,6 +47,9 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
     setVisitOutcome(VISIT_OUTCOMES[0]);
     setVisitNotes("");
     setVisitFollowUp("");
+    setDealName("");
+    setDealAmount("");
+    setDealStage(OPPORTUNITY_STAGES[0]);
     setCheckoutStatus("idle");
     setCheckoutError("");
   }
@@ -108,7 +126,10 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
       checkInTimestamp,
       visitOutcome,
       visitNotes,
-      visitFollowUp
+      visitFollowUp,
+      dealName,
+      dealAmount,
+      dealStage
     };
 
     async function queueForLater() {
@@ -128,9 +149,12 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
       let result;
 
       if (selected.type === "lead") {
+        const newStatus = getStatusForOutcome(visitOutcome);
+
         result = await updateLead(selected.id, {
           Last_Visit_Date__c: today,
-          GIS_Validation_Status__c: "Validated"
+          GIS_Validation_Status__c: "Validated",
+          ...(newStatus ? { Status: newStatus } : {})
         });
       } else {
         result = await updateAccount(selected.id, {
@@ -143,6 +167,27 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
         throw new Error("Salesforce update failed while checking out.");
       }
 
+      // "Opportunity Created" carries real deal details captured on-site.
+      // Accounts already have an Id an Opportunity can genuinely link to
+      // (AccountId); Leads don't have an equivalent lookup on Opportunity
+      // in this org, so that link is a soft one - the deal name includes
+      // the lead's name, and a breadcrumb goes on this visit's own notes.
+      let opportunityNoteSuffix = "";
+
+      if (isOpportunityOutcome(visitOutcome) && dealName.trim()) {
+        const opportunityName = `${selected.name} - ${dealName.trim()}`;
+
+        await createOpportunity({
+          Name: opportunityName,
+          StageName: dealStage,
+          CloseDate: defaultCloseDate(),
+          Amount: dealAmount ? Number(dealAmount) : null,
+          AccountId: selected.type === "customer" ? selected.id : null
+        });
+
+        opportunityNoteSuffix = `\n[Opportunity created: ${opportunityName}]`;
+      }
+
       // Real Field_Visit__c record - check-in/out time, geofence-verified
       // outcome and notes captured on-site, not a hardcoded pass.
       await createFieldVisit({
@@ -153,7 +198,7 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
         Check_In_Time__c: checkInTimestamp,
         Check_Out_Time__c: now,
         Visit_Outcome__c: visitOutcome,
-        Notes__c: visitNotes.trim() || null,
+        Notes__c: (visitNotes.trim() + opportunityNoteSuffix).trim() || null,
         Follow_up_Date__c: visitFollowUp || null
       });
 
@@ -194,6 +239,12 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
     setVisitNotes,
     visitFollowUp,
     setVisitFollowUp,
+    dealName,
+    setDealName,
+    dealAmount,
+    setDealAmount,
+    dealStage,
+    setDealStage,
     checkoutSubmitting,
     checkoutStatus,
     checkoutError,

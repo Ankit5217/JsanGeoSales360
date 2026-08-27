@@ -1,6 +1,13 @@
 import { listPending, updateStatus, remove, subscribe } from "./queue";
 import { getToken } from "../config/apiBase";
-import { updateLead, updateAccount, createFieldVisit, createEvidence } from "../services/salesforceApi";
+import { updateLead, updateAccount, createFieldVisit, createEvidence, createOpportunity } from "../services/salesforceApi";
+import { getStatusForOutcome, isOpportunityOutcome } from "../components/mapview/checkoutOutcome";
+
+function defaultCloseDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().split("T")[0];
+}
 
 async function syncCheckout(payload) {
   const {
@@ -12,22 +19,50 @@ async function syncCheckout(payload) {
     checkInTimestamp,
     visitOutcome,
     visitNotes,
-    visitFollowUp
+    visitFollowUp,
+    dealName,
+    dealAmount,
+    dealStage
   } = payload;
 
-  const result =
-    selectedType === "lead"
-      ? await updateLead(selectedId, {
-          Last_Visit_Date__c: today,
-          GIS_Validation_Status__c: "Validated"
-        })
-      : await updateAccount(selectedId, {
-          Last_Visit_Date__c: today,
-          GIS_Validation_Status__c: "Validated"
-        });
+  let result;
+
+  if (selectedType === "lead") {
+    const newStatus = getStatusForOutcome(visitOutcome);
+
+    result = await updateLead(selectedId, {
+      Last_Visit_Date__c: today,
+      GIS_Validation_Status__c: "Validated",
+      ...(newStatus ? { Status: newStatus } : {})
+    });
+  } else {
+    result = await updateAccount(selectedId, {
+      Last_Visit_Date__c: today,
+      GIS_Validation_Status__c: "Validated"
+    });
+  }
 
   if (!result || result.success !== true) {
     throw new Error("Salesforce update failed while syncing a queued check-out.");
+  }
+
+  // Same soft-link reasoning as the live checkout path in useFieldVisit.js -
+  // Accounts get a real AccountId on the Opportunity, Leads get a name +
+  // visit-notes breadcrumb since Opportunity has no Lead lookup in this org.
+  let opportunityNoteSuffix = "";
+
+  if (isOpportunityOutcome(visitOutcome) && dealName && dealName.trim()) {
+    const opportunityName = `${selectedName} - ${dealName.trim()}`;
+
+    await createOpportunity({
+      Name: opportunityName,
+      StageName: dealStage,
+      CloseDate: defaultCloseDate(),
+      Amount: dealAmount ? Number(dealAmount) : null,
+      AccountId: selectedType === "customer" ? selectedId : null
+    });
+
+    opportunityNoteSuffix = `\n[Opportunity created: ${opportunityName}]`;
   }
 
   await createFieldVisit({
@@ -38,7 +73,7 @@ async function syncCheckout(payload) {
     Check_In_Time__c: checkInTimestamp,
     Check_Out_Time__c: now,
     Visit_Outcome__c: visitOutcome,
-    Notes__c: visitNotes ? visitNotes.trim() || null : null,
+    Notes__c: ((visitNotes ? visitNotes.trim() : "") + opportunityNoteSuffix).trim() || null,
     Follow_up_Date__c: visitFollowUp || null
   });
 }

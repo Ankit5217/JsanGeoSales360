@@ -4,6 +4,8 @@ import useIsMobile from "../hooks/useIsMobile";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
+import { OPPORTUNITY_STAGES } from "./modules/Opportunities";
+import { isOpportunityOutcome } from "./mapview/checkoutOutcome";
 import {
     PRIORITY_COLOR,
     GEOFENCE_RADIUS_METERS,
@@ -87,6 +89,12 @@ export default function MapView() {
     setVisitNotes,
     visitFollowUp,
     setVisitFollowUp,
+    dealName,
+    setDealName,
+    dealAmount,
+    setDealAmount,
+    dealStage,
+    setDealStage,
     checkoutSubmitting,
     checkoutStatus,
     checkoutError,
@@ -1179,6 +1187,39 @@ style={{
                           ))}
                         </select>
 
+                        {isOpportunityOutcome(visitOutcome) && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', padding: '8px', border: '1px solid #d5dce3', borderRadius: '6px', background: '#f6f8fb' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 600 }}>Deal Name</label>
+                            <input
+                              type="text"
+                              value={dealName}
+                              onChange={e => setDealName(e.target.value)}
+                              placeholder="e.g. New POS System"
+                              style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px' }}
+                            />
+
+                            <label style={{ fontSize: '11px', fontWeight: 600 }}>Amount (optional)</label>
+                            <input
+                              type="number"
+                              value={dealAmount}
+                              onChange={e => setDealAmount(e.target.value)}
+                              placeholder="0"
+                              style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px' }}
+                            />
+
+                            <label style={{ fontSize: '11px', fontWeight: 600 }}>Stage</label>
+                            <select
+                              value={dealStage}
+                              onChange={e => setDealStage(e.target.value)}
+                              style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px' }}
+                            >
+                              {OPPORTUNITY_STAGES.map(stage => (
+                                <option key={stage} value={stage}>{stage}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
                         <label style={{ fontSize: '11px', fontWeight: 600 }}>Notes</label>
                         <textarea
                           value={visitNotes}
@@ -1195,13 +1236,21 @@ style={{
                           style={{ padding: '6px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '12px' }}
                         />
 
-                        <button
-                          onClick={checkOut}
-                          disabled={checkoutSubmitting}
-                          style={{ padding: '8px', fontWeight: 700, border: 'none', borderRadius: '5px', background: checkoutSubmitting ? '#9aa8b5' : '#0B2E4F', color: '#fff', cursor: checkoutSubmitting ? 'default' : 'pointer' }}
-                        >
-                          {checkoutSubmitting ? "Saving..." : "Check out & complete visit"}
-                        </button>
+                        {(() => {
+                          const needsDealName = isOpportunityOutcome(visitOutcome) && !dealName.trim();
+                          const checkoutDisabled = checkoutSubmitting || needsDealName;
+
+                          return (
+                            <button
+                              onClick={checkOut}
+                              disabled={checkoutDisabled}
+                              title={needsDealName ? "Enter a deal name to create the Opportunity" : ""}
+                              style={{ padding: '8px', fontWeight: 700, border: 'none', borderRadius: '5px', background: checkoutDisabled ? '#9aa8b5' : '#0B2E4F', color: '#fff', cursor: checkoutDisabled ? 'default' : 'pointer' }}
+                            >
+                              {checkoutSubmitting ? "Saving..." : "Check out & complete visit"}
+                            </button>
+                          );
+                        })()}
 
                         {checkoutStatus === 'queued' && (
                           <div style={{ color: '#B5760A', fontWeight: 700, fontSize: '12px', background: '#FBF0DD', padding: '8px', borderRadius: '5px' }}>
