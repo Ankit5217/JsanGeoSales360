@@ -805,7 +805,8 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
         params={
             "fields": (
                 "Name,Candidate_Name__c,Business_Name__c,Phone__c,"
-                "Related_Lead__c,Review_Status__c"
+                "Related_Lead__c,Review_Status__c,"
+                "Location__Latitude__s,Location__Longitude__s"
             )
         }
     )
@@ -846,7 +847,26 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
 
     lead_id = lead_response.json()["id"]
 
-    lat, lng = _assign_random_location("Lead", lead_id)
+    candidate_lat = candidate.get("Location__Latitude__s")
+    candidate_lng = candidate.get("Location__Longitude__s")
+
+    if candidate_lat is not None and candidate_lng is not None:
+        # Carry forward the candidate's own location (its original random
+        # placeholder, or a real correction someone made to it) instead of
+        # generating an unrelated new random point - previously every
+        # conversion silently discarded it.
+        sf_request(
+            "PATCH",
+            f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead/{lead_id}",
+            json={
+                "Location__Latitude__s": candidate_lat,
+                "Location__Longitude__s": candidate_lng
+            }
+        )
+        lat, lng = candidate_lat, candidate_lng
+    else:
+        lat, lng = _assign_random_location("Lead", lead_id)
+
     _assign_territory_by_point("Lead", lead_id, lat, lng, "Territory_ID__c")
 
     sf_request(
