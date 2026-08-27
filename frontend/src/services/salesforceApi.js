@@ -678,6 +678,29 @@ export async function convertDiscoveryCandidateToLead(candidateId) {
     return await response.json();
 }
 
+export async function syncDiscoveryCandidateLocationToLead(candidateId) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/discovery-candidates/${candidateId}/sync-location`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to sync location to lead"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function checkDiscoveryCandidateDuplicates(candidateId) {
 
     const response = await authFetch(

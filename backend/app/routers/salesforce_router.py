@@ -36,6 +36,7 @@ from app.services.salesforce_service import  (
     update_discovery_candidate,
     delete_discovery_candidate,
     convert_discovery_candidate_to_lead,
+    sync_discovery_candidate_location_to_lead,
     check_discovery_candidate_duplicates,
     create_territory,
     update_territory,
@@ -271,6 +272,12 @@ def convert_candidate_to_lead(
     candidate_id: str
 ):
     return convert_discovery_candidate_to_lead(candidate_id)
+
+@router.post("/discovery-candidates/{candidate_id}/sync-location")
+def sync_candidate_location_to_lead(
+    candidate_id: str
+):
+    return sync_discovery_candidate_location_to_lead(candidate_id)
 
 @router.post("/discovery-candidates/{candidate_id}/check-duplicates")
 def check_candidate_duplicates(

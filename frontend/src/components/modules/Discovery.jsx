@@ -3,6 +3,7 @@ import {
     getDiscoveryCandidates,
     updateDiscoveryCandidate,
     convertDiscoveryCandidateToLead,
+    syncDiscoveryCandidateLocationToLead,
     createDiscoveryCandidate,
     checkDiscoveryCandidateDuplicates
 } from "../../services/salesforceApi";
@@ -70,6 +71,8 @@ export default function Discovery() {
     const [error, setError] = useState("");
     const [busyId, setBusyId] = useState(null);
     const [rowErrors, setRowErrors] = useState({});
+    const [syncBusyId, setSyncBusyId] = useState(null);
+    const [syncMessages, setSyncMessages] = useState({});
 
     const [showForm, setShowForm] = useState(false);
     const [formValues, setFormValues] = useState({
@@ -190,6 +193,37 @@ export default function Discovery() {
         } finally {
 
             setBusyId(null);
+
+        }
+
+    }
+
+
+    async function handleSyncLocation(candidate) {
+
+        setSyncBusyId(candidate.id);
+
+        setSyncMessages(prev => ({ ...prev, [candidate.id]: null }));
+
+        try {
+
+            await syncDiscoveryCandidateLocationToLead(candidate.id);
+
+            setSyncMessages(prev => ({
+                ...prev,
+                [candidate.id]: { error: false, text: "Lead location updated." }
+            }));
+
+        } catch (err) {
+
+            setSyncMessages(prev => ({
+                ...prev,
+                [candidate.id]: { error: true, text: err.message || "Sync failed" }
+            }));
+
+        } finally {
+
+            setSyncBusyId(null);
 
         }
 
@@ -524,6 +558,8 @@ export default function Discovery() {
                             const rowError = rowErrors[candidate.id];
                             const isDuplicateBusy = duplicateBusyId === candidate.id;
                             const duplicatePanel = duplicatePanels[candidate.id];
+                            const isSyncBusy = syncBusyId === candidate.id;
+                            const syncMessage = syncMessages[candidate.id];
 
                             return (
                                 <Fragment key={candidate.id}>
@@ -630,11 +666,34 @@ export default function Discovery() {
                                                 {isConverted ? "Converted ✓" : "Convert to Lead"}
                                             </button>
 
+                                            {isConverted && (
+                                                <button
+                                                    onClick={() => handleSyncLocation(candidate)}
+                                                    disabled={isSyncBusy}
+                                                    title="Push this candidate's current location onto its converted Lead"
+                                                    style={actionButtonStyle("#0E8388", isSyncBusy)}
+                                                >
+                                                    {isSyncBusy ? "Syncing..." : "Sync location to Lead"}
+                                                </button>
+                                            )}
+
                                         </div>
 
                                         {rowError && (
                                             <div style={{ color: "#c62828", fontSize: "11px", marginTop: "4px" }}>
                                                 {rowError}
+                                            </div>
+                                        )}
+
+                                        {syncMessage && (
+                                            <div
+                                                style={{
+                                                    color: syncMessage.error ? "#c62828" : "#2e7d32",
+                                                    fontSize: "11px",
+                                                    marginTop: "4px"
+                                                }}
+                                            >
+                                                {syncMessage.text}
                                             </div>
                                         )}
 

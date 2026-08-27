@@ -883,6 +883,66 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
     }
 
 
+def sync_discovery_candidate_location_to_lead(candidate_id: str):
+    """
+    Re-pushes a candidate's CURRENT location onto its already-converted
+    Lead. convert_discovery_candidate_to_lead() only copies the location at
+    the moment of conversion - if someone corrects the candidate's location
+    afterward (directly in Salesforce; this app has no in-app editor for
+    it), that correction never reaches the Lead on its own since they're
+    separate records from then on. This is the explicit, on-demand fix for
+    that gap.
+    """
+    detail_url = (
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/Discovery_Candidate__c/{candidate_id}"
+    )
+
+    response = sf_request(
+        "GET",
+        detail_url,
+        params={
+            "fields": "Related_Lead__c,Location__Latitude__s,Location__Longitude__s"
+        }
+    )
+
+    candidate = response.json()
+
+    lead_id = candidate.get("Related_Lead__c")
+
+    if not lead_id:
+        raise HTTPException(
+            status_code=400,
+            detail="This candidate hasn't been converted to a Lead yet."
+        )
+
+    lat = candidate.get("Location__Latitude__s")
+    lng = candidate.get("Location__Longitude__s")
+
+    if lat is None or lng is None:
+        raise HTTPException(
+            status_code=400,
+            detail="This candidate has no location to sync."
+        )
+
+    sf_request(
+        "PATCH",
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead/{lead_id}",
+        json={
+            "Location__Latitude__s": lat,
+            "Location__Longitude__s": lng
+        }
+    )
+
+    _assign_territory_by_point("Lead", lead_id, lat, lng, "Territory_ID__c")
+
+    return {
+        "message": "Lead location synced from the Discovery Candidate.",
+        "lead_id": lead_id,
+        "latitude": lat,
+        "longitude": lng
+    }
+
+
 def get_territory_assignments():
     query = """
     SELECT
