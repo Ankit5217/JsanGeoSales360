@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useUser } from "../context/UserContext";
+import useIsMobile from "../hooks/useIsMobile";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
@@ -7,6 +8,7 @@ import {
     PRIORITY_COLOR,
     GEOFENCE_RADIUS_METERS,
     TERRITORY_BOUNDARY_COLORS,
+    NEXT_BEST_STOP_RADIUS_KM,
     parseTerritoryBoundary
 } from "./mapview/mapviewUtils";
 import { FitToRoute, FitToRecords, TerritoryDrawControl } from "./mapview/MapLayers";
@@ -16,6 +18,7 @@ import { useRecordsData } from "./mapview/useRecordsData";
 import { useTerritoryBoundary } from "./mapview/useTerritoryBoundary";
 import { useFieldVisit } from "./mapview/useFieldVisit";
 import { useRouteGeneration } from "./mapview/useRouteGeneration";
+import { useNextBestStops } from "./mapview/useNextBestStops";
 import { useLiveFeed } from "./mapview/useLiveFeed";
 import { generateExecutiveReport, exportBusinessData, exportAIActivity } from "./mapview/reportExport";
 
@@ -58,6 +61,9 @@ export default function MapView() {
   const [showTerritories, setShowTerritories] = useState(true);
   const [priorityFilter, setPriorityFilter] = useState('');
   const [searchText, setSearchText] = useState("");
+
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const territoryOptions = [
     ...new Set(
@@ -102,8 +108,26 @@ export default function MapView() {
     routeTerritory,
     setRouteTerritory,
     generateRoute,
+    runRouteOptimization,
     routeStats
   } = useRouteGeneration({ records, leadRecords });
+
+  const {
+    currentPosition,
+    positionError,
+    positionLoading,
+    refreshPosition,
+    suggestions
+  } = useNextBestStops(mapRecords);
+
+  async function addTopSuggestionsToRoute(count) {
+    if (!currentPosition || suggestions.length === 0) return;
+
+    const start = { id: "current-location", name: "Current Location", lat: currentPosition.lat, lng: currentPosition.lng };
+    const picks = suggestions.slice(0, count).map(s => s.record);
+
+    await runRouteOptimization([start, ...picks]);
+  }
 
   const { liveAlerts, liveActivityFeed } = useLiveFeed({ loadAccounts, loadLeads });
 
@@ -263,13 +287,25 @@ export default function MapView() {
         position: "relative",
         display: "flex",
         width: "100%",
-        minHeight: "700px",
-        height: "700px",
+        minHeight: isMobile ? "60vh" : "700px",
+        height: isMobile ? "60vh" : "700px",
         overflow: "hidden",
         boxSizing: "border-box",
         background: "#ffffff"
     }}
 >
+
+      {isMobile && filtersOpen && (
+          <div
+              onClick={() => setFiltersOpen(false)}
+              style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.45)",
+                  zIndex: 55
+              }}
+          />
+      )}
 
       <div
     style={{
@@ -280,7 +316,19 @@ export default function MapView() {
         borderRight: "1px solid #ddd",
         overflowY: "auto",
         background: "#fff",
-        boxSizing: "border-box"
+        boxSizing: "border-box",
+        ...(isMobile
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                zIndex: 60,
+                boxShadow: "2px 0 12px rgba(0,0,0,0.2)",
+                transform: filtersOpen ? "translateX(0)" : "translateX(-100%)",
+                transition: "transform 0.2s ease"
+            }
+            : {})
     }}
 >
         <h3 style={{ marginTop: 0 }}>Filters</h3>
@@ -483,6 +531,102 @@ export default function MapView() {
 </>
 )}
 
+<h3
+    style={{
+        borderTop: '1px solid #eee',
+        paddingTop: '14px'
+    }}
+>
+    Smart Suggestions
+</h3>
+
+<button
+    disabled={positionLoading}
+    onClick={refreshPosition}
+    style={{ cursor: positionLoading ? 'default' : 'pointer' }}
+>
+    {positionLoading
+        ? "Finding your location..."
+        : currentPosition
+            ? "Refresh my location"
+            : "Show my next best stops"}
+</button>
+
+{positionError && (
+    <div
+        style={{
+            marginTop: '10px',
+            fontSize: '12px',
+            color: '#C1443C',
+            background: '#fdecea',
+            padding: '8px',
+            borderRadius: '6px'
+        }}
+    >
+        ⚠ {positionError}
+    </div>
+)}
+
+{currentPosition && suggestions.length === 0 && !positionLoading && (
+    <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+        No accounts, leads, or open opportunities within {NEXT_BEST_STOP_RADIUS_KM} km right now.
+    </div>
+)}
+
+{suggestions.map(s => (
+    <div
+        key={s.record.id}
+        style={{
+            marginTop: '10px',
+            padding: '10px',
+            background: '#f6f8fb',
+            borderRadius: '8px',
+            fontSize: '12px'
+        }}
+    >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <strong style={{ fontSize: '13px' }}>{s.record.name}</strong>
+            <span
+                style={{
+                    background: '#0B2E4F',
+                    color: '#fff',
+                    borderRadius: '12px',
+                    padding: '2px 8px',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    flexShrink: 0
+                }}
+            >
+                {s.score}
+            </span>
+        </div>
+
+        <div style={{ marginTop: '6px', height: '5px', background: '#e1e6eb', borderRadius: '3px', overflow: 'hidden' }}>
+            <div
+                style={{
+                    width: `${s.score}%`,
+                    height: '100%',
+                    background: PRIORITY_COLOR[s.record.priority] || '#0E8388'
+                }}
+            />
+        </div>
+
+        <div style={{ marginTop: '6px', color: '#666' }}>
+            {s.reason}
+        </div>
+    </div>
+))}
+
+{suggestions.length > 0 && canPlanRoutes && (
+    <button
+        disabled={routeLoading}
+        onClick={() => addTopSuggestionsToRoute(2)}
+        style={{ marginTop: '10px', width: '100%', cursor: routeLoading ? 'default' : 'pointer' }}
+    >
+        Add top 2 to today's route
+    </button>
+)}
+
 {canPlanRoutes && (
 <>
 <h3
@@ -647,7 +791,7 @@ export default function MapView() {
         position: "relative",
         flex: 1,
         minWidth: 0,
-        height: "700px",
+        height: isMobile ? "60vh" : "700px",
         borderRadius: "10px",
         overflow: "hidden",
         background: "#ffffff",
@@ -661,7 +805,7 @@ export default function MapView() {
         position: "absolute",
         top: "12px",
         left: "12px",
-        right: selected ? "350px" : "12px",
+        right: (!isMobile && selected) ? "350px" : "12px",
         zIndex: 900,
         display: "flex",
         alignItems: "center",
@@ -675,6 +819,24 @@ export default function MapView() {
         flexWrap: "wrap"
     }}
 >
+
+    {isMobile && (
+        <button
+            onClick={() => setFiltersOpen(true)}
+            style={{
+                padding: "7px 12px",
+                borderRadius: "6px",
+                border: "1px solid #d5dce3",
+                background: "#0B2E4F",
+                color: "#ffffff",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: "600"
+            }}
+        >
+            ☰ Filters
+        </button>
+    )}
 
     <div
         style={{
@@ -914,23 +1076,41 @@ export default function MapView() {
 
 
 <div
-    style={{
-        position: "absolute",
-        top: "12px",
-        right: selected ? "12px" : "-360px",
-        width: "320px",
-        maxWidth: "calc(100% - 24px)",
-        maxHeight: "calc(100% - 24px)",
-        background: "#ffffff",
-        border: "1px solid #e1e6eb",
-        borderRadius: "10px",
-        transition: "right 0.25s ease",
-        padding: "18px",
-        boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
-        overflowY: "auto",
-        zIndex: 1000,
-        boxSizing: "border-box"
-    }}
+    style={isMobile
+        ? {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: selected ? 0 : "-75%",
+            width: "100%",
+            maxHeight: "70%",
+            background: "#ffffff",
+            border: "1px solid #e1e6eb",
+            borderRadius: "14px 14px 0 0",
+            transition: "bottom 0.25s ease",
+            padding: "18px",
+            boxShadow: "0 -6px 20px rgba(0,0,0,0.15)",
+            overflowY: "auto",
+            zIndex: 1000,
+            boxSizing: "border-box"
+        }
+        : {
+            position: "absolute",
+            top: "12px",
+            right: selected ? "12px" : "-360px",
+            width: "320px",
+            maxWidth: "calc(100% - 24px)",
+            maxHeight: "calc(100% - 24px)",
+            background: "#ffffff",
+            border: "1px solid #e1e6eb",
+            borderRadius: "10px",
+            transition: "right 0.25s ease",
+            padding: "18px",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+            overflowY: "auto",
+            zIndex: 1000,
+            boxSizing: "border-box"
+        }}
 >
           {selected && (
             <>

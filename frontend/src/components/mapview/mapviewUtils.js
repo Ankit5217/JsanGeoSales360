@@ -1,6 +1,8 @@
 // Pure helper functions and constants used across the GIS Map view.
 // Split out of mapview.jsx (Phase 9) - no behavior change, just moved.
 
+import { OPPORTUNITY_STAGES } from "../modules/Opportunities";
+
 export const TYPE_COLOR = { customer: '#0B2E4F', lead: '#0E8388', opportunity: '#D98F00', prospect: '#2E8B57', duplicate: '#C1443C' };
 export const TYPE_LABEL = { customer: 'Existing Customer', lead: 'Existing Lead', opportunity: 'High-value Opportunity', prospect: 'New Prospect', duplicate: 'Possible Duplicate' };
 export const PRIORITY_COLOR = {
@@ -171,4 +173,96 @@ export function calculateTerritoryScore(t) {
     score -= t.pending * 5;
 
     return Math.min(100, Math.round(score));
+}
+
+// Smart Suggestions (Phase 10B) - next-best-stop ranking.
+
+export const NEXT_BEST_STOP_RADIUS_KM = 15;
+
+const OPEN_OPPORTUNITY_STAGES = OPPORTUNITY_STAGES.filter(
+    stage => stage !== "Closed Won" && stage !== "Closed Lost"
+);
+
+// Whole days between a Last_Visit_Date__c-style value and now. Null means
+// "never visited" (the field is the literal string "-" when unset).
+export function daysSince(dateString) {
+    if (!dateString || dateString === "-") return null;
+
+    const then = new Date(dateString);
+    if (isNaN(then.getTime())) return null;
+
+    return Math.max(0, Math.floor((Date.now() - then.getTime()) / 86400000));
+}
+
+function distanceBonus(distanceKm) {
+    if (distanceKm <= 1) return 20;
+    if (distanceKm <= 3) return 15;
+    if (distanceKm <= 7) return 10;
+    return 5;
+}
+
+// Ranks how worth visiting `record` is right now, given the rep's current
+// position. Returns null for records outside NEXT_BEST_STOP_RADIUS_KM or
+// closed opportunities - these aren't candidates, not zero-scored ones.
+// Two lenses: accounts/leads are visit-driven (overdue days + priority),
+// opportunities are deal-driven (stage progress + value) since they carry
+// no real lastVisit/priority of their own (see useRecordsData.js).
+export function calculateNextBestStopScore(record, currentPos) {
+    if (record.lat == null || record.lng == null) return null;
+
+    const distanceKm = haversine([currentPos.lat, currentPos.lng], [record.lat, record.lng]);
+    if (distanceKm > NEXT_BEST_STOP_RADIUS_KM) return null;
+
+    const distancePart = distanceBonus(distanceKm);
+    const distanceLabel = `${distanceKm.toFixed(1)} km away`;
+
+    if (record.type === "opportunity") {
+        if (record.stage === "Closed Won" || record.stage === "Closed Lost") return null;
+
+        const stageIndex = OPEN_OPPORTUNITY_STAGES.indexOf(record.stage);
+        const stageScore = stageIndex >= 0
+            ? Math.round((stageIndex / (OPEN_OPPORTUNITY_STAGES.length - 1)) * 40)
+            : 15;
+
+        let valueScore = 0;
+        if (record.oppValue > 1000000) valueScore = 30;
+        else if (record.oppValue > 500000) valueScore = 20;
+        else if (record.oppValue > 100000) valueScore = 10;
+
+        return {
+            score: Math.min(100, stageScore + valueScore + distancePart),
+            reason: `Open opportunity in ${record.stage || "early stage"} · ${distanceLabel}`,
+            distanceKm
+        };
+    }
+
+    const overdueDays = daysSince(record.lastVisit);
+    let overdueScore, overdueLabel;
+
+    if (overdueDays === null) {
+        overdueScore = 45;
+        overdueLabel = record.type === "lead" ? "New lead · unvisited ever" : "Never visited";
+    } else if (overdueDays >= 60) {
+        overdueScore = 45;
+        overdueLabel = `Overdue visit (${overdueDays} days)`;
+    } else if (overdueDays >= 30) {
+        overdueScore = 35;
+        overdueLabel = `Overdue visit (${overdueDays} days)`;
+    } else if (overdueDays >= 14) {
+        overdueScore = 20;
+        overdueLabel = `Due for a visit (${overdueDays} days)`;
+    } else {
+        overdueScore = 5;
+        overdueLabel = `Visited ${overdueDays} day${overdueDays === 1 ? "" : "s"} ago`;
+    }
+
+    let priorityScore = 10;
+    if (record.priority === "High") priorityScore = 30;
+    else if (record.priority === "Medium") priorityScore = 20;
+
+    return {
+        score: Math.min(100, overdueScore + priorityScore + distancePart),
+        reason: `${overdueLabel} · ${record.priority || "Medium"} priority · ${distanceLabel}`,
+        distanceKm
+    };
 }

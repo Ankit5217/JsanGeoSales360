@@ -6,14 +6,31 @@ import OfflineBanner from "./components/OfflineBanner";
 import { UserProvider } from "./context/UserContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { startOfflineSync } from "./offline/syncEngine";
+import useIsMobile from "./hooks/useIsMobile";
+
+const MODULE_LABELS = {
+    dashboard: "Dashboard",
+    accounts: "Accounts",
+    leads: "Leads",
+    opportunities: "Opportunities",
+    discovery: "Discovery",
+    territories: "Territories",
+    routes: "Routes",
+    fieldVisits: "Field Visits",
+    evidence: "Evidence",
+    gis: "GIS Map",
+    userRoles: "User Roles"
+};
 
 
 function AppShell() {
 
     const [activeModule, setActiveModule] =
         useState("dashboard");
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const { isAuthenticated, checkedStorage } = useAuth();
+    const isMobile = useIsMobile();
 
     // Started once, regardless of auth state, so a queued item that only
     // needs a fresh login still drains automatically the moment one exists -
@@ -55,6 +72,8 @@ function AppShell() {
                         <Sidebar
                             activeModule={activeModule}
                             onModuleChange={setActiveModule}
+                            isOpen={sidebarOpen}
+                            onClose={() => setSidebarOpen(false)}
                         />
 
 
@@ -65,6 +84,48 @@ function AppShell() {
                                 minHeight: "100vh"
                             }}
                         >
+
+                            {isMobile && (
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "12px",
+                                        padding: "12px 16px",
+                                        background: "var(--gs-navy)",
+                                        color: "var(--gs-ink-on-navy)",
+                                        position: "sticky",
+                                        top: 0,
+                                        zIndex: 30
+                                    }}
+                                >
+                                    <button
+                                        onClick={() => setSidebarOpen(true)}
+                                        aria-label="Open menu"
+                                        style={{
+                                            border: "1px solid rgba(255,255,255,0.18)",
+                                            background: "transparent",
+                                            color: "inherit",
+                                            borderRadius: "6px",
+                                            padding: "6px 10px",
+                                            fontSize: "16px",
+                                            lineHeight: 1,
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        ☰
+                                    </button>
+                                    <div
+                                        style={{
+                                            fontFamily: "var(--gs-font-display)",
+                                            fontSize: "15px",
+                                            fontWeight: 700
+                                        }}
+                                    >
+                                        {MODULE_LABELS[activeModule] || "GeoSales 360"}
+                                    </div>
+                                </div>
+                            )}
 
                             <ModuleRenderer
                                 activeModule={activeModule}

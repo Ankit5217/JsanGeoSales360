@@ -117,6 +117,7 @@ export function useRouteGeneration({ records, leadRecords }) {
     routeTerritory,
     setRouteTerritory,
     generateRoute,
+    runRouteOptimization,
     routeStats
   };
 }

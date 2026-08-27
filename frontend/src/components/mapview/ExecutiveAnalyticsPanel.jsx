@@ -332,7 +332,7 @@ AI Executive Dashboard
 <div
     style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1fr",
+        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
         gap: "20px",
         alignItems: "stretch",
         marginTop: "25px"
@@ -676,7 +676,7 @@ fontWeight:"bold"
 <div
     style={{
         display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
         gap: "20px",
         alignItems: "stretch",
         marginTop: "25px",
@@ -1077,6 +1077,7 @@ textAlign:"center"
         Territory Analytics
     </h3>
 
+    <div style={{ overflowX: "auto" }}>
     <table
         style={{
             width: "100%",
@@ -1127,6 +1128,7 @@ textAlign:"center"
         </tbody>
 
     </table>
+    </div>
 
 </div>
 <div
@@ -1581,6 +1583,7 @@ textAlign:"center"
 
     <h3>Top Performing Territories</h3>
 
+    <div style={{ overflowX: "auto" }}>
     <table
         style={{
             width: "100%",
@@ -1643,6 +1646,7 @@ textAlign:"center"
         </tbody>
 
     </table>
+    </div>
 
 <div
     style={{
@@ -1713,7 +1717,7 @@ textAlign:"center"
     <div
         style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2,1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
             gap: "15px"
         }}
     >
@@ -1769,6 +1773,7 @@ textAlign:"center"
 
 <h3>AI Opportunity Score</h3>
 
+<div style={{ overflowX: "auto" }}>
 <table
     style={{
         width: "100%",
@@ -1889,6 +1894,7 @@ style={{
 </tbody>
 
 </table>
+</div>
 
 </div>
 
@@ -2057,6 +2063,7 @@ style={{
 
 <h3>AI Revenue Risk Analysis</h3>
 
+<div style={{ overflowX: "auto" }}>
 <table
 style={{
     width:"100%",
@@ -2156,6 +2163,7 @@ record.riskScore>=70
 </tbody>
 
 </table>
+</div>
 
 </div>
 <div
@@ -2170,6 +2178,7 @@ record.riskScore>=70
 
 <h3>AI Sales Ranking</h3>
 
+<div style={{ overflowX: "auto" }}>
 <table
     style={{
         width: "100%",
@@ -2305,6 +2314,7 @@ record.aiScore>=80
 </tbody>
 
 </table>
+</div>
 
 </div>
 
@@ -2320,6 +2330,7 @@ record.aiScore>=80
 
 <h3>AI Territory Ranking</h3>
 
+<div style={{ overflowX: "auto" }}>
 <table
     style={{
         width:"100%",
@@ -2438,6 +2449,7 @@ t.aiScore>=80
 </tbody>
 
 </table>
+</div>
 
 </div>
         </>

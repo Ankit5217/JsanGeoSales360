@@ -182,9 +182,11 @@ async function handleRoleChange(userId, newRole) {
                 }}
             >
 
+                <div style={{ overflowX: "auto" }}>
                 <table
                     style={{
                         width: "100%",
+                        minWidth: "520px",
                         borderCollapse:
                             "collapse"
                     }}
@@ -265,7 +267,9 @@ async function handleRoleChange(userId, newRole) {
                                                 "1px solid #ccc",
 
                                             minWidth:
-                                                "220px",
+                                                "180px",
+                                            maxWidth:
+                                                "100%",
 
                                             background:
                                                 updatingUser ===
@@ -325,6 +329,7 @@ async function handleRoleChange(userId, newRole) {
                     </tbody>
 
                 </table>
+                </div>
 
             </div>
 

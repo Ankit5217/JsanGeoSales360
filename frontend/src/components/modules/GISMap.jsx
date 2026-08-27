@@ -7,8 +7,11 @@ import {
     getGISRoutes,
     getGISFieldVisits
 } from "../../services/salesforceApi";
+import useIsMobile from "../../hooks/useIsMobile";
 
 export default function GISMap() {
+
+    const isMobile = useIsMobile();
 
     const [accounts, setAccounts] = useState([]);
     const [leads, setLeads] = useState([]);
@@ -296,7 +299,7 @@ export default function GISMap() {
                 style={{
                     display: "grid",
                     gridTemplateColumns:
-                        "repeat(4, 1fr)",
+                        "repeat(auto-fit, minmax(140px, 1fr))",
                     gap: "15px",
                     marginBottom: "20px"
                 }}
@@ -459,7 +462,7 @@ export default function GISMap() {
                         style={{
                             display: "grid",
                             gridTemplateColumns:
-                                "1fr 360px",
+                                isMobile ? "1fr" : "1fr 360px",
                             minHeight: "380px"
                         }}
                     >

@@ -457,6 +457,7 @@ export default function Evidence() {
             <div
                 style={{
                     display: "flex",
+                    flexWrap: "wrap",
                     gap: "15px",
                     marginTop: "20px",
                     marginBottom: "20px"
@@ -536,10 +537,12 @@ export default function Evidence() {
                 }}
             >
 
+                <div style={{ overflowX: "auto" }}>
                 <table
                     style={{
                         width: "100%",
-                        borderCollapse: "collapse"
+                        borderCollapse: "collapse",
+                        minWidth: "600px"
                     }}
                 >
 
@@ -714,6 +717,7 @@ export default function Evidence() {
                     </tbody>
 
                 </table>
+                </div>
 
 
                 {/* EMPTY STATE */}

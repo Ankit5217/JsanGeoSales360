@@ -385,7 +385,8 @@ export default function Dashboard() {
             {showTerritories && (
                 <div style={{ marginTop: "25px" }}>
                     <Panel title="Territory Coverage">
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                        <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", minWidth: "560px", borderCollapse: "collapse", fontSize: "13px" }}>
                             <thead>
                                 <tr style={{ textAlign: "left", borderBottom: "2px solid #e1e6eb" }}>
                                     <th style={{ padding: "8px" }}>Territory</th>
@@ -413,6 +414,7 @@ export default function Dashboard() {
                                 </tr>
                             </tbody>
                         </table>
+                        </div>
                     </Panel>
                 </div>
             )}

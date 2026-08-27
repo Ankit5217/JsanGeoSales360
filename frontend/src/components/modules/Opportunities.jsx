@@ -8,7 +8,7 @@ import {
 
 // Real Opportunity.StageName picklist values, verified via Salesforce
 // describe - not guessed, since an invalid value is a validation error.
-const OPPORTUNITY_STAGES = [
+export const OPPORTUNITY_STAGES = [
     "Prospecting",
     "Qualification",
     "Needs Analysis",

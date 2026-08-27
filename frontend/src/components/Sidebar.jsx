@@ -1,5 +1,6 @@
 import { useUser } from "../context/UserContext";
 import { useAuth } from "../context/AuthContext";
+import useIsMobile from "../hooks/useIsMobile";
 import jsanLogo from "../assets/jsan-logo.jpg";
 
 const MODULES = [
@@ -16,14 +17,32 @@ const MODULES = [
     { key: "userRoles", label: "User Roles", icon: "🔐", permission: "userRoles" }
 ];
 
-export default function Sidebar({ activeModule, onModuleChange }) {
+export default function Sidebar({ activeModule, onModuleChange, isOpen, onClose }) {
     const { currentUser, hasPermission } = useUser();
     const { logout } = useAuth();
+    const isMobile = useIsMobile();
 
     const allowedModules = MODULES.filter(module => hasPermission(module.permission));
     const initial = (currentUser?.username || "?").charAt(0).toUpperCase();
 
     return (
+        <>
+
+        {isMobile && (
+            <div
+                onClick={onClose}
+                style={{
+                    position: "fixed",
+                    inset: 0,
+                    background: "rgba(0,0,0,0.45)",
+                    zIndex: 40,
+                    opacity: isOpen ? 1 : 0,
+                    pointerEvents: isOpen ? "auto" : "none",
+                    transition: "opacity 0.2s ease"
+                }}
+            />
+        )}
+
         <div
             style={{
                 width: "252px",
@@ -34,7 +53,18 @@ export default function Sidebar({ activeModule, onModuleChange }) {
                 display: "flex",
                 flexDirection: "column",
                 boxSizing: "border-box",
-                boxShadow: "2px 0 12px rgba(0,0,0,0.15)"
+                boxShadow: "2px 0 12px rgba(0,0,0,0.15)",
+                ...(isMobile
+                    ? {
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        bottom: 0,
+                        zIndex: 50,
+                        transform: isOpen ? "translateX(0)" : "translateX(-100%)",
+                        transition: "transform 0.2s ease"
+                    }
+                    : {})
             }}
         >
 
@@ -100,7 +130,10 @@ export default function Sidebar({ activeModule, onModuleChange }) {
                     return (
                         <button
                             key={module.key}
-                            onClick={() => onModuleChange(module.key)}
+                            onClick={() => {
+                                onModuleChange(module.key);
+                                if (isMobile) onClose?.();
+                            }}
                             style={{
                                 width: "100%",
                                 display: "flex",
@@ -204,5 +237,7 @@ export default function Sidebar({ activeModule, onModuleChange }) {
             </div>
 
         </div>
+
+        </>
     );
 }
