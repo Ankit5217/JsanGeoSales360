@@ -30,6 +30,7 @@ from app.schemas.field_visit_schema import (
 from app.schemas.validation_evidence_schema import (
     ValidationEvidenceCreate,
     ValidationEvidenceUpdate,
+    ValidationEvidenceFulfill,
 )
 from urllib.parse import quote
 from datetime import date
@@ -1367,6 +1368,40 @@ def update_evidence(evidence_id: str, evidence: ValidationEvidenceUpdate):
     return {
         "message": "Validation Evidence updated successfully"
     }
+
+
+def fulfill_evidence(evidence_id: str, fulfill: ValidationEvidenceFulfill):
+    """
+    Lets a field rep complete an evidence request an admin/manager logged
+    with no photo yet - attaches the photo (reusing the same
+    ContentVersion/ContentDocumentLink upload as create_evidence) and/or
+    sets Remarks__c. Never touches Status__c - that stays Pending until an
+    admin/manager reviews it via update_evidence.
+    """
+    payload = {}
+
+    if fulfill.Remarks__c is not None:
+        payload["Remarks__c"] = fulfill.Remarks__c
+
+    if fulfill.photo_base64:
+        photo_url = _attach_evidence_photo(
+            evidence_id,
+            fulfill.photo_base64,
+            fulfill.photo_filename or f"{evidence_id}.jpg"
+        )
+        payload["Photo_URL__c"] = photo_url
+
+    if payload:
+        sf_request(
+            "PATCH",
+            f"{INSTANCE_URL}/services/data/v64.0/sobjects/Validation_Evidence__c/{evidence_id}",
+            json=payload
+        )
+
+    return {
+        "message": "Validation Evidence fulfilled successfully"
+    }
+
 
 def delete_evidence(evidence_id: str):
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Validation_Evidence__c/{evidence_id}"

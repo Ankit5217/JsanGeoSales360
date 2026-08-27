@@ -49,6 +49,7 @@ from app.services.salesforce_service import  (
     delete_visit,
     create_evidence,
     update_evidence,
+    fulfill_evidence,
     delete_evidence,
     get_accounts_by_territory,
     get_leads_by_territory,
@@ -157,6 +158,7 @@ from app.schemas.field_visit_schema import (
 from app.schemas.validation_evidence_schema import (
     ValidationEvidenceCreate,
     ValidationEvidenceUpdate,
+    ValidationEvidenceFulfill,
 )
 
 router = APIRouter(
@@ -366,6 +368,14 @@ def update_existing_evidence(
     evidence: ValidationEvidenceUpdate
 ):
     return update_evidence(evidence_id, evidence)
+
+
+@router.put("/evidence/{evidence_id}/fulfill")
+def fulfill_existing_evidence(
+    evidence_id: str,
+    fulfill: ValidationEvidenceFulfill
+):
+    return fulfill_evidence(evidence_id, fulfill)
 
 
 @router.delete("/evidence/{evidence_id}")

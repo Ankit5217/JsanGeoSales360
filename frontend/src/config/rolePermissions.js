@@ -35,7 +35,10 @@ export const ROLE_PERMISSIONS = {
         PERMISSIONS.VIEW_GIS,
         PERMISSIONS.MANAGE_TERRITORIES,
         PERMISSIONS.VIEW_LIVE_OPS,
-        PERMISSIONS.REVIEW_EVIDENCE
+        PERMISSIONS.REVIEW_EVIDENCE,
+        // Managers can log an evidence request (e.g. "verify this site") -
+        // typically with no photo yet, for a field rep to fulfill.
+        PERMISSIONS.UPLOAD_EVIDENCE
     ],
 
     FIELD_USER: [

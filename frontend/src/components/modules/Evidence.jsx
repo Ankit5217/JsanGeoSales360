@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getEvidence, createEvidence, updateEvidence } from "../../services/salesforceApi";
+import { getEvidence, createEvidence, updateEvidence, fulfillEvidence } from "../../services/salesforceApi";
 import { enqueue } from "../../offline/queue";
 import { useUser } from "../../context/UserContext";
 import { PERMISSIONS } from "../../config/rolePermissions";
@@ -91,6 +91,17 @@ export default function Evidence() {
 
     const [reviewingId, setReviewingId] = useState(null);
     const [reviewError, setReviewError] = useState("");
+
+    const [fulfillingId, setFulfillingId] = useState(null);
+    const [fulfillRemarks, setFulfillRemarks] = useState("");
+    const [fulfillPhotoBase64, setFulfillPhotoBase64] = useState("");
+    const [fulfillPhotoFilename, setFulfillPhotoFilename] = useState("");
+    const [fulfillPhotoProcessing, setFulfillPhotoProcessing] = useState(false);
+    const [fulfillPhotoError, setFulfillPhotoError] = useState("");
+    const [fulfillSubmitting, setFulfillSubmitting] = useState(false);
+    const [fulfillError, setFulfillError] = useState("");
+
+    const totalColumns = 7 + (canReview ? 1 : 0) + (canUpload ? 1 : 0);
 
     useEffect(() => {
 
@@ -252,6 +263,78 @@ export default function Evidence() {
         } finally {
 
             setReviewingId(null);
+
+        }
+
+    }
+
+    function openFulfill(item) {
+        setFulfillingId(item.id);
+        setFulfillRemarks("");
+        setFulfillPhotoBase64("");
+        setFulfillPhotoFilename("");
+        setFulfillPhotoError("");
+        setFulfillError("");
+    }
+
+    function closeFulfill() {
+        setFulfillingId(null);
+    }
+
+    async function handleFulfillPhotoCapture(e) {
+        const file = e.target.files && e.target.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        setFulfillPhotoError("");
+        setFulfillPhotoProcessing(true);
+
+        try {
+            const base64 = await downscalePhoto(file);
+            const filename = (file.name || "evidence-photo").replace(/\.[^.]+$/, "") + ".jpg";
+
+            setFulfillPhotoBase64(base64);
+            setFulfillPhotoFilename(filename);
+        } catch (err) {
+            setFulfillPhotoError(err.message || "Could not process the photo. Try again.");
+        } finally {
+            setFulfillPhotoProcessing(false);
+        }
+    }
+
+    async function handleFulfillSubmit(item) {
+
+        if (!fulfillPhotoBase64 && !fulfillRemarks.trim()) {
+            setFulfillError("Add a photo or a remark before submitting.");
+            return;
+        }
+
+        setFulfillSubmitting(true);
+        setFulfillError("");
+
+        const remarks = [item.remarks, fulfillRemarks.trim() || null].filter(Boolean).join(" ");
+
+        try {
+
+            await fulfillEvidence(item.id, {
+                Remarks__c: remarks || null,
+                photo_base64: fulfillPhotoBase64 || null,
+                photo_filename: fulfillPhotoFilename || null
+            });
+
+            setFulfillingId(null);
+
+            await loadEvidence();
+
+        } catch (err) {
+
+            setFulfillError(err.message || "Failed to submit. Try again.");
+
+        } finally {
+
+            setFulfillSubmitting(false);
 
         }
 
@@ -626,6 +709,12 @@ export default function Evidence() {
                                 Salesforce ID
                             </th>
 
+                            {canUpload && (
+                                <th style={thStyle}>
+                                    Fulfill
+                                </th>
+                            )}
+
                             {canReview && (
                                 <th style={thStyle}>
                                     Review
@@ -640,7 +729,7 @@ export default function Evidence() {
                     <tbody>
 
                         {evidence.map(
-                            (item, index) => (
+                            (item, index) => [
 
                                 <tr
                                     key={
@@ -760,6 +849,25 @@ export default function Evidence() {
                                     </td>
 
 
+                                    {/* FULFILL ACTION */}
+
+                                    {canUpload && (
+                                        <td style={tdStyle}>
+                                            {(!item.photo && item.status === "Pending") ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => (fulfillingId === item.id ? closeFulfill() : openFulfill(item))}
+                                                    style={reviewButtonStyle("#0B2E4F", false)}
+                                                >
+                                                    {fulfillingId === item.id ? "Cancel" : "Add Photo & Remarks"}
+                                                </button>
+                                            ) : (
+                                                <span style={{ color: "#999" }}>-</span>
+                                            )}
+                                        </td>
+                                    )}
+
+
                                     {/* REVIEW ACTIONS */}
 
                                     {canReview && (
@@ -785,9 +893,94 @@ export default function Evidence() {
                                         </td>
                                     )}
 
-                                </tr>
+                                </tr>,
 
-                            )
+                                fulfillingId === item.id && (
+
+                                    <tr key={`${item.id}-fulfill`}>
+                                        <td colSpan={totalColumns} style={{ ...tdStyle, background: "#f6f8fb" }}>
+
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", alignItems: "flex-end" }}>
+
+                                                <div>
+                                                    <label style={fieldLabelStyle}>Photo</label>
+
+                                                    {!fulfillPhotoBase64 ? (
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            capture="environment"
+                                                            onChange={handleFulfillPhotoCapture}
+                                                            disabled={fulfillPhotoProcessing}
+                                                            style={fieldInputStyle}
+                                                        />
+                                                    ) : (
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                            <img
+                                                                src={`data:image/jpeg;base64,${fulfillPhotoBase64}`}
+                                                                alt="Captured evidence"
+                                                                style={{ width: "60px", height: "44px", objectFit: "cover", borderRadius: "6px", border: "1px solid #ddd" }}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setFulfillPhotoBase64(""); setFulfillPhotoFilename(""); }}
+                                                                style={{ padding: "5px 8px", borderRadius: "6px", border: "1px solid #ccc", background: "#fff", fontSize: "11px", cursor: "pointer" }}
+                                                            >
+                                                                Retake
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {fulfillPhotoProcessing && (
+                                                        <div style={{ fontSize: "11px", color: "#666", marginTop: "4px" }}>Processing photo...</div>
+                                                    )}
+
+                                                    {fulfillPhotoError && (
+                                                        <div style={{ fontSize: "11px", color: "#c62828", marginTop: "4px" }}>{fulfillPhotoError}</div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ flex: "1 1 220px" }}>
+                                                    <label style={fieldLabelStyle}>Remarks</label>
+                                                    <input
+                                                        type="text"
+                                                        value={fulfillRemarks}
+                                                        onChange={e => setFulfillRemarks(e.target.value)}
+                                                        placeholder="What you found on-site"
+                                                        style={fieldInputStyle}
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={fulfillSubmitting || fulfillPhotoProcessing}
+                                                    onClick={() => handleFulfillSubmit(item)}
+                                                    style={{
+                                                        padding: "9px 16px",
+                                                        borderRadius: "6px",
+                                                        border: "none",
+                                                        background: (fulfillSubmitting || fulfillPhotoProcessing) ? "#9aa8b5" : "#2e7d32",
+                                                        color: "#fff",
+                                                        fontWeight: "bold",
+                                                        fontSize: "12px",
+                                                        cursor: (fulfillSubmitting || fulfillPhotoProcessing) ? "default" : "pointer"
+                                                    }}
+                                                >
+                                                    {fulfillSubmitting ? "Submitting..." : "Submit"}
+                                                </button>
+
+                                            </div>
+
+                                            {fulfillError && (
+                                                <div style={{ marginTop: "8px", fontSize: "12px", color: "#c62828" }}>{fulfillError}</div>
+                                            )}
+
+                                        </td>
+                                    </tr>
+
+                                )
+
+                            ]
                         )}
 
                     </tbody>

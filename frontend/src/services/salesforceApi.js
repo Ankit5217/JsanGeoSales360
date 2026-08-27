@@ -973,6 +973,31 @@ export async function updateEvidence(evidenceId, data) {
     return await response.json();
 }
 
+export async function fulfillEvidence(evidenceId, data) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/evidence/${evidenceId}/fulfill`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to submit evidence"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function getOpportunities() {
 
     try {

@@ -42,3 +42,18 @@ class ValidationEvidenceUpdate(BaseModel):
     Validation_Date__c: Optional[date] = None
     Status__c: Optional[str] = None
     Remarks__c: Optional[str] = None
+
+
+class ValidationEvidenceFulfill(BaseModel):
+    """
+    A deliberately narrow sibling of ValidationEvidenceUpdate - for a field
+    rep completing an evidence request an admin/manager logged (with no
+    photo yet). Can only ever touch the photo and remarks, never Status__c
+    or anything else, so this endpoint stays safe to open to any
+    authenticated role without reopening the self-approve gap that
+    ValidationEvidenceUpdate/PUT /evidence/{id} is now locked down against.
+    """
+
+    Remarks__c: Optional[str] = None
+    photo_base64: Optional[str] = None
+    photo_filename: Optional[str] = None
