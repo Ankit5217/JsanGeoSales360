@@ -2,6 +2,7 @@ import { useState } from "react";
 import { updateAccount, updateLead, createFieldVisit } from "../../services/salesforceApi";
 import { VISIT_OUTCOMES } from "../modules/FieldVisits";
 import { GEOFENCE_RADIUS_METERS, getCurrentPosition, haversine } from "./mapviewUtils";
+import { enqueue } from "../../offline/queue";
 
 // The on-site check-in -> geofence verification -> outcome capture ->
 // check-out flow for a selected Account/Lead, plus the record-selection
@@ -16,6 +17,10 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
   const [visitNotes, setVisitNotes] = useState("");
   const [visitFollowUp, setVisitFollowUp] = useState("");
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  // 'idle' | 'submitting' | 'queued' | 'error' - queued means it's saved to
+  // the offline queue and will sync automatically, not a failure.
+  const [checkoutStatus, setCheckoutStatus] = useState("idle");
+  const [checkoutError, setCheckoutError] = useState("");
 
   const selected = combinedRecords.find(r => r.id === selectedId) || null;
 
@@ -27,6 +32,8 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
     setVisitOutcome(VISIT_OUTCOMES[0]);
     setVisitNotes("");
     setVisitFollowUp("");
+    setCheckoutStatus("idle");
+    setCheckoutError("");
   }
 
   function openRecord(r) {
@@ -83,11 +90,41 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
     }
 
     setCheckoutSubmitting(true);
+    setCheckoutStatus("submitting");
+    setCheckoutError("");
+
+    const today = new Date().toISOString().split("T")[0];
+    const now = new Date().toISOString();
+
+    // Everything runSyncedCheckout / the offline sync engine needs to
+    // reconstruct this exact check-out later, since checkInTimestamp/today/
+    // now are point-in-time values, not something to recompute at sync time.
+    const queuedPayload = {
+      selectedType: selected.type,
+      selectedId: selected.id,
+      selectedName: selected.name,
+      today,
+      now,
+      checkInTimestamp,
+      visitOutcome,
+      visitNotes,
+      visitFollowUp
+    };
+
+    async function queueForLater() {
+      await enqueue("checkout", queuedPayload);
+      setSelectedId(selected.id);
+      resetCheckInState();
+      setCheckoutStatus("queued");
+    }
+
+    if (!navigator.onLine) {
+      await queueForLater();
+      setCheckoutSubmitting(false);
+      return;
+    }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const now = new Date().toISOString();
-
       let result;
 
       if (selected.type === "lead") {
@@ -103,8 +140,7 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
       }
 
       if (!result || result.success !== true) {
-        console.error("Salesforce update failed:", result);
-        return;
+        throw new Error("Salesforce update failed while checking out.");
       }
 
       // Real Field_Visit__c record - check-in/out time, geofence-verified
@@ -127,6 +163,19 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
       resetCheckInState();
     } catch (error) {
       console.error("Check-out error:", error);
+
+      // A fetch()-level network failure (offline, DNS, connection refused)
+      // throws a plain TypeError before a response ever comes back - that's
+      // the signal to queue for later, not to show an error. A real HTTP
+      // error status (validation failure, etc.) reached the caller as a
+      // regular Error and should still surface as an error; retrying it
+      // automatically later wouldn't help.
+      if (error instanceof TypeError || !navigator.onLine) {
+        await queueForLater();
+      } else {
+        setCheckoutStatus("error");
+        setCheckoutError(error.message || "Failed to check out. Try again.");
+      }
     } finally {
       setCheckoutSubmitting(false);
     }
@@ -146,6 +195,8 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
     visitFollowUp,
     setVisitFollowUp,
     checkoutSubmitting,
+    checkoutStatus,
+    checkoutError,
     openRecord,
     checkIn,
     checkOut

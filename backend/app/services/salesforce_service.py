@@ -1172,7 +1172,8 @@ def create_evidence(evidence: ValidationEvidenceCreate):
 
     payload = evidence.model_dump(
         mode="json",
-        exclude_none=True
+        exclude_none=True,
+        exclude={"photo_base64", "photo_filename"}
     )
 
     response = sf_request(
@@ -1181,10 +1182,93 @@ def create_evidence(evidence: ValidationEvidenceCreate):
         json=payload
     )
 
-    return {
+    evidence_id = response.json()["id"]
+
+    result = {
         "message": "Validation Evidence created successfully",
-        "id": response.json()["id"]
+        "id": evidence_id
     }
+
+    # A real camera photo (not the typed Photo_URL__c field) is uploaded
+    # as an actual Salesforce File after the record exists, so a failure
+    # here still leaves the evidence record itself intact rather than
+    # losing the whole submission over a file-attach problem.
+    if evidence.photo_base64:
+        try:
+            photo_url = _attach_evidence_photo(
+                evidence_id,
+                evidence.photo_base64,
+                evidence.photo_filename or f"{evidence.Name}.jpg"
+            )
+
+            sf_request(
+                "PATCH",
+                f"{INSTANCE_URL}/services/data/v64.0/sobjects/Validation_Evidence__c/{evidence_id}",
+                json={"Photo_URL__c": photo_url}
+            )
+
+            result["photo_upload_status"] = "uploaded"
+
+        except Exception:
+            logger.exception(
+                "Evidence photo upload failed for %s", evidence_id
+            )
+            result["photo_upload_status"] = "failed"
+
+    return result
+
+
+def _attach_evidence_photo(record_id: str, photo_base64: str, filename: str) -> str:
+    """
+    Uploads a base64-encoded photo as a real Salesforce File (ContentVersion)
+    and links it to `record_id` via ContentDocumentLink. Returns a
+    file-download URL, meant to be written into that record's Photo_URL__c
+    so the existing read path (get_validation_evidence) needs no changes.
+    """
+    cv_response = sf_request(
+        "POST",
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/ContentVersion",
+        json={
+            "Title": filename,
+            "PathOnClient": filename,
+            "VersionData": photo_base64
+        }
+    )
+
+    content_version_id = cv_response.json()["id"]
+
+    # The ContentVersion insert response only returns its own Id, not the
+    # ContentDocumentId needed to link it to a record - a follow-up query
+    # is required.
+    query = f"SELECT ContentDocumentId FROM ContentVersion WHERE Id = '{content_version_id}'"
+
+    query_response = sf_request(
+        "GET",
+        f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(query)}"
+    )
+
+    records = query_response.json().get("records", [])
+
+    if not records:
+        raise RuntimeError(
+            f"ContentVersion {content_version_id} was created but its "
+            "ContentDocumentId could not be resolved"
+        )
+
+    content_document_id = records[0]["ContentDocumentId"]
+
+    sf_request(
+        "POST",
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/ContentDocumentLink",
+        json={
+            "ContentDocumentId": content_document_id,
+            "LinkedEntityId": record_id,
+            "ShareType": "V",
+            "Visibility": "AllUsers"
+        }
+    )
+
+    return f"{INSTANCE_URL}/sfc/servlet.shepherd/version/download/{content_version_id}"
 
 def update_evidence(evidence_id: str, evidence: ValidationEvidenceUpdate):
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Validation_Evidence__c/{evidence_id}"

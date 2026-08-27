@@ -18,6 +18,15 @@ class ValidationEvidenceCreate(BaseModel):
     Status__c: Optional[str] = None
     Remarks__c: Optional[str] = None
 
+    # A real camera-captured photo, base64-encoded (no "data:" prefix) -
+    # not the Photo_URL__c field above, which stays available for a
+    # manually typed URL. When present, the service layer uploads this as
+    # a real Salesforce File (ContentVersion + ContentDocumentLink) after
+    # creating the record, then sets Photo_URL__c to the resulting file's
+    # download URL - no separate field needed on the read side.
+    photo_base64: Optional[str] = None
+    photo_filename: Optional[str] = None
+
 
 class ValidationEvidenceUpdate(BaseModel):
 

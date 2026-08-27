@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getEvidence, createEvidence } from "../../services/salesforceApi";
+import { enqueue } from "../../offline/queue";
 
 const EVIDENCE_TYPES = [
     "Photograph",
@@ -18,22 +19,70 @@ const EVIDENCE_TYPES = [
 
 const EVIDENCE_STATUSES = ["Pending", "Approved", "Rejected"];
 
+const EMPTY_FORM = {
+    name: "",
+    type: EVIDENCE_TYPES[0],
+    photoBase64: "",
+    photoFilename: "",
+    validationDate: "",
+    status: EVIDENCE_STATUSES[0],
+    remarks: ""
+};
+
+// Downscales a captured photo before it ever reaches the offline queue -
+// keeps IndexedDB usage sane across many queued visits and stays well
+// under Salesforce's ContentVersion base64 ceiling, which is much cheaper
+// to guard against here than to debug mid-sync later.
+function downscalePhoto(file, maxDimension = 1600, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onerror = () => reject(new Error("Could not read the captured photo."));
+
+        reader.onload = () => {
+            const img = new Image();
+
+            img.onerror = () => reject(new Error("Could not read the captured photo."));
+
+            img.onload = () => {
+                let { width, height } = img;
+
+                if (width > maxDimension || height > maxDimension) {
+                    const scale = maxDimension / Math.max(width, height);
+                    width = Math.round(width * scale);
+                    height = Math.round(height * scale);
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL("image/jpeg", quality);
+                resolve(dataUrl.split(",")[1]);
+            };
+
+            img.src = reader.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
 export default function Evidence() {
 
     const [evidence, setEvidence] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [showForm, setShowForm] = useState(false);
-    const [formValues, setFormValues] = useState({
-        name: "",
-        type: EVIDENCE_TYPES[0],
-        photoUrl: "",
-        validationDate: "",
-        status: EVIDENCE_STATUSES[0],
-        remarks: ""
-    });
+    const [formValues, setFormValues] = useState(EMPTY_FORM);
     const [formError, setFormError] = useState("");
+    const [formNotice, setFormNotice] = useState("");
     const [formSubmitting, setFormSubmitting] = useState(false);
+    const [photoProcessing, setPhotoProcessing] = useState(false);
+    const [photoError, setPhotoError] = useState("");
 
     useEffect(() => {
 
@@ -78,6 +127,33 @@ export default function Evidence() {
 
     }
 
+    async function handlePhotoCapture(e) {
+        const file = e.target.files && e.target.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        setPhotoError("");
+        setPhotoProcessing(true);
+
+        try {
+            const base64 = await downscalePhoto(file);
+            const filename = (file.name || "evidence-photo").replace(/\.[^.]+$/, "") + ".jpg";
+
+            setFormValues(prev => ({ ...prev, photoBase64: base64, photoFilename: filename }));
+        } catch (err) {
+            setPhotoError(err.message || "Could not process the photo. Try again.");
+        } finally {
+            setPhotoProcessing(false);
+        }
+    }
+
+    function clearPhoto() {
+        setFormValues(prev => ({ ...prev, photoBase64: "", photoFilename: "" }));
+        setPhotoError("");
+    }
+
     async function handleCreate(e) {
 
         e.preventDefault();
@@ -89,34 +165,50 @@ export default function Evidence() {
 
         setFormSubmitting(true);
         setFormError("");
+        setFormNotice("");
+
+        const payload = {
+            Name: formValues.name.trim(),
+            Evidence_Type__c: formValues.type,
+            Validation_Date__c: formValues.validationDate || null,
+            Status__c: formValues.status,
+            Remarks__c: formValues.remarks.trim() || null,
+            photo_base64: formValues.photoBase64 || null,
+            photo_filename: formValues.photoFilename || null
+        };
+
+        async function queueForLater() {
+            await enqueue("evidence", payload);
+            setFormValues(EMPTY_FORM);
+            setFormNotice("Saved offline - this evidence will sync automatically once you're back online.");
+        }
+
+        if (!navigator.onLine) {
+            await queueForLater();
+            setFormSubmitting(false);
+            return;
+        }
 
         try {
 
-            await createEvidence({
-                Name: formValues.name.trim(),
-                Evidence_Type__c: formValues.type,
-                Photo_URL__c: formValues.photoUrl.trim() || null,
-                Validation_Date__c: formValues.validationDate || null,
-                Status__c: formValues.status,
-                Remarks__c: formValues.remarks.trim() || null
-            });
+            await createEvidence(payload);
 
-            setFormValues({
-                name: "",
-                type: EVIDENCE_TYPES[0],
-                photoUrl: "",
-                validationDate: "",
-                status: EVIDENCE_STATUSES[0],
-                remarks: ""
-            });
-
+            setFormValues(EMPTY_FORM);
             setShowForm(false);
 
             await loadEvidence();
 
         } catch (err) {
 
-            setFormError(err.message || "Failed to create evidence.");
+            // A fetch()-level network failure means offline/unreachable -
+            // queue it rather than losing the submission. A real HTTP error
+            // (e.g. a rejected picklist value) reached the server and
+            // should surface as an actual error instead.
+            if (err instanceof TypeError || !navigator.onLine) {
+                await queueForLater();
+            } else {
+                setFormError(err.message || "Failed to create evidence.");
+            }
 
         } finally {
 
@@ -192,6 +284,22 @@ export default function Evidence() {
 
             </div>
 
+            {formNotice && !showForm && (
+                <div
+                    style={{
+                        marginTop: "16px",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        background: "#FBF0DD",
+                        color: "#B5760A",
+                        fontWeight: 600,
+                        fontSize: "13px"
+                    }}
+                >
+                    ⏳ {formNotice}
+                </div>
+            )}
+
             {showForm && (
 
                 <form
@@ -232,14 +340,46 @@ export default function Evidence() {
                         </select>
                     </div>
 
-                    <div>
-                        <label style={fieldLabelStyle}>Photo URL</label>
-                        <input
-                            type="text"
-                            value={formValues.photoUrl}
-                            onChange={e => setFormValues(prev => ({ ...prev, photoUrl: e.target.value }))}
-                            style={fieldInputStyle}
-                        />
+                    <div style={{ gridColumn: "span 2" }}>
+                        <label style={fieldLabelStyle}>Photo</label>
+
+                        {!formValues.photoBase64 ? (
+                            <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handlePhotoCapture}
+                                disabled={photoProcessing}
+                                style={fieldInputStyle}
+                            />
+                        ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <img
+                                    src={`data:image/jpeg;base64,${formValues.photoBase64}`}
+                                    alt="Captured evidence"
+                                    style={{ width: "70px", height: "50px", objectFit: "cover", borderRadius: "6px", border: "1px solid #ddd" }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={clearPhoto}
+                                    style={{ padding: "6px 10px", borderRadius: "6px", border: "1px solid #ccc", background: "#fff", fontSize: "12px", cursor: "pointer" }}
+                                >
+                                    Retake
+                                </button>
+                            </div>
+                        )}
+
+                        {photoProcessing && (
+                            <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
+                                Processing photo...
+                            </div>
+                        )}
+
+                        {photoError && (
+                            <div style={{ fontSize: "12px", color: "#c62828", marginTop: "4px" }}>
+                                {photoError}
+                            </div>
+                        )}
                     </div>
 
                     <div>
@@ -278,22 +418,28 @@ export default function Evidence() {
                     <div style={{ display: "flex", alignItems: "flex-end" }}>
                         <button
                             type="submit"
-                            disabled={formSubmitting}
+                            disabled={formSubmitting || photoProcessing}
                             style={{
                                 padding: "10px 16px",
                                 borderRadius: "8px",
                                 border: "none",
-                                background: formSubmitting ? "#9aa8b5" : "#2e7d32",
+                                background: (formSubmitting || photoProcessing) ? "#9aa8b5" : "#2e7d32",
                                 color: "#fff",
                                 fontWeight: "bold",
                                 fontSize: "13px",
-                                cursor: formSubmitting ? "default" : "pointer",
+                                cursor: (formSubmitting || photoProcessing) ? "default" : "pointer",
                                 width: "100%"
                             }}
                         >
                             {formSubmitting ? "Saving..." : "Save"}
                         </button>
                     </div>
+
+                    {formNotice && (
+                        <div style={{ gridColumn: "1 / -1", color: "#B5760A", fontWeight: 600, fontSize: "13px" }}>
+                            ⏳ {formNotice}
+                        </div>
+                    )}
 
                     {formError && (
                         <div style={{ gridColumn: "1 / -1", color: "#c62828", fontSize: "13px" }}>

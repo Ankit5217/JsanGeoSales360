@@ -82,6 +82,8 @@ export default function MapView() {
     visitFollowUp,
     setVisitFollowUp,
     checkoutSubmitting,
+    checkoutStatus,
+    checkoutError,
     openRecord,
     checkIn,
     checkOut
@@ -1020,6 +1022,18 @@ style={{
                         >
                           {checkoutSubmitting ? "Saving..." : "Check out & complete visit"}
                         </button>
+
+                        {checkoutStatus === 'queued' && (
+                          <div style={{ color: '#B5760A', fontWeight: 700, fontSize: '12px', background: '#FBF0DD', padding: '8px', borderRadius: '5px' }}>
+                            ⏳ Offline — saved on this device, will sync automatically when you're back online.
+                          </div>
+                        )}
+
+                        {checkoutStatus === 'error' && (
+                          <div style={{ color: '#C1443C', fontWeight: 700, fontSize: '12px' }}>
+                            ⚠ {checkoutError}
+                          </div>
+                        )}
                       </>
                     )}
                     {geofenceOk === false && (
