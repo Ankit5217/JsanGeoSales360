@@ -42,7 +42,11 @@ export function useRecordsData() {
           owner: account.Owner?.Name || "Not Assigned",
           oppValue: account.AnnualRevenue || 0,
           discoverySource: account.Discovery_Source__c || "-",
-          validation: account.GIS_Validation_Status__c || "Validated",
+          // A blank GIS_Validation_Status__c means "not yet validated," not
+          // "validated" - defaulting to "Validated" here previously made
+          // every unvalidated account/lead look validated on the GIS Map
+          // and in the analytics/scoring that reads from this hook.
+          validation: account.GIS_Validation_Status__c || "Pending",
           lastVisit: account.Last_Visit_Date__c || "-",
           nextVisit: account.Next_Visit_Date__c || "-",
           visitStatus: account.Last_Visit_Date__c ? "completed" : "pending"
@@ -71,7 +75,7 @@ export function useRecordsData() {
           owner: lead.Owner?.Name || "Not Assigned",
           oppValue: 0,
           discoverySource: lead.Discovery_Source__c || "Salesforce Lead",
-          validation: lead.GIS_Validation_Status__c || "Validated",
+          validation: lead.GIS_Validation_Status__c || "Pending",
           lastVisit: lead.Last_Visit_Date__c || "-",
           nextVisit: lead.Next_Visit_Date__c || "-",
           visitStatus: lead.Last_Visit_Date__c ? "completed" : "pending"
@@ -105,7 +109,7 @@ export function useRecordsData() {
             stage: opp.StageName,
             accountName: account.Name || "-",
             discoverySource: "-",
-            validation: account.GIS_Validation_Status__c || "Validated",
+            validation: account.GIS_Validation_Status__c || "Pending",
             // Opportunities aren't field-visit targets - default to
             // "completed" so the check-in/out panel never renders
             // for one (that flow belongs to Accounts/Leads).

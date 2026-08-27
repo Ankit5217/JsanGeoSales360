@@ -11,6 +11,38 @@ const LEAD_STATUSES = [
     "Closed - Not Converted"
 ];
 
+const LEAD_STATUS_COLORS = {
+    "Open - Not Contacted": { bg: "#e3f2fd", color: "#1565c0" },
+    "Working - Contacted": { bg: "#fff3e0", color: "#ef6c00" },
+    "Closed - Converted": { bg: "#e8f5e9", color: "#2e7d32" },
+    "Closed - Not Converted": { bg: "#fdecea", color: "#c62828" }
+};
+
+function LeadStatusBadge({ status }) {
+
+    if (!status) {
+        return <span style={{ color: "#999", fontSize: "12px" }}>-</span>;
+    }
+
+    const colors = LEAD_STATUS_COLORS[status] || { bg: "#f4f6f9", color: "#555" };
+
+    return (
+        <span
+            style={{
+                display: "inline-block",
+                padding: "5px 10px",
+                borderRadius: "15px",
+                fontSize: "12px",
+                fontWeight: "bold",
+                background: colors.bg,
+                color: colors.color
+            }}
+        >
+            {status}
+        </span>
+    );
+}
+
 export default function Leads() {
 
     const { can } = useUser();
@@ -548,6 +580,10 @@ export default function Leads() {
                             </th>
 
                             <th style={cellStyle}>
+                                Status
+                            </th>
+
+                            <th style={cellStyle}>
                                 Sales Priority
                             </th>
 
@@ -609,6 +645,13 @@ export default function Leads() {
 
                                     <td style={cellStyle}>
                                         {lead.Company || "-"}
+                                    </td>
+
+
+                                    {/* STATUS */}
+
+                                    <td style={cellStyle}>
+                                        <LeadStatusBadge status={lead.Status} />
                                     </td>
 
 
