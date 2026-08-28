@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     getAccounts,
     getLeads,
@@ -160,8 +160,35 @@ export function useRecordsData() {
     loadAllOpportunities();
   }, []);
 
+  // An Account's real revenue is the sum of its own Closed Won Opportunity
+  // amounts - not the static AnnualRevenue field, which nothing in this
+  // app's checkout/conversion flow ever writes, so it never moved no
+  // matter how many deals actually closed. Falls back to AnnualRevenue
+  // only for an Account with no Closed Won deals of its own yet, so
+  // seeded demo accounts still show a meaningful number until something
+  // real closes against them. Computed here (not per-consumer) so the
+  // map's detail panel and the AI Executive Dashboard's revenue figures,
+  // which both read oppValue off these same records, never disagree.
+  const recordsWithRevenue = useMemo(() => {
+    const closedWonByAccountId = new Map();
+
+    allOpportunities
+      .filter(o => o.stage === "Closed Won" && o.account_id)
+      .forEach(o => {
+        closedWonByAccountId.set(
+          o.account_id,
+          (closedWonByAccountId.get(o.account_id) || 0) + (o.amount || 0)
+        );
+      });
+
+    return records.map(r => {
+      const wonRevenue = closedWonByAccountId.get(r.id);
+      return wonRevenue != null ? { ...r, oppValue: wonRevenue } : r;
+    });
+  }, [records, allOpportunities]);
+
   return {
-    records,
+    records: recordsWithRevenue,
     leadRecords,
     opportunityRecords,
     allOpportunities,

@@ -530,9 +530,38 @@ def convert_lead_to_account(lead_id: str):
 
     lead = response.json()
 
+    company = lead.get("Company")
+    phone = lead.get("Phone")
+
+    # Reuse an existing Account for this Lead if one was already created by
+    # an earlier checkout on the same Lead (e.g. a rep re-running
+    # "Opportunity Created" after correcting a mistake, or a re-opened
+    # Lead being checked out again) - there's no real link to check
+    # directly (see the docstring above), so this matches on the same
+    # Name/Phone this function itself always writes. Without this, every
+    # repeat checkout on the same Lead created a brand new, separate
+    # Account instead of updating the one already there.
+    existing_account_id = None
+
+    if company:
+        where = f"Name = '{company.replace(chr(39), chr(92) + chr(39))}'"
+
+        if phone:
+            where += f" AND Phone = '{phone.replace(chr(39), chr(92) + chr(39))}'"
+
+        match_response = sf_request(
+            "GET",
+            f"{INSTANCE_URL}/services/data/v64.0/query?q={quote(f'SELECT Id FROM Account WHERE {where} LIMIT 1')}"
+        )
+
+        matches = match_response.json().get("records", [])
+
+        if matches:
+            existing_account_id = matches[0]["Id"]
+
     account_payload = {
-        "Name": lead.get("Company"),
-        "Phone": lead.get("Phone"),
+        "Name": company,
+        "Phone": phone,
         "Location__Latitude__s": lead.get("Location__Latitude__s"),
         "Location__Longitude__s": lead.get("Location__Longitude__s"),
         "Sales_Priority__c": lead.get("Sales_Priority__c"),
@@ -541,13 +570,22 @@ def convert_lead_to_account(lead_id: str):
         "Last_Visit_Date__c": lead.get("Last_Visit_Date__c")
     }
 
-    account_response = sf_request(
-        "POST",
-        f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account",
-        json={k: v for k, v in account_payload.items() if v is not None}
-    )
+    clean_payload = {k: v for k, v in account_payload.items() if v is not None}
 
-    account_id = account_response.json()["id"]
+    if existing_account_id:
+        sf_request(
+            "PATCH",
+            f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account/{existing_account_id}",
+            json=clean_payload
+        )
+        account_id = existing_account_id
+    else:
+        account_response = sf_request(
+            "POST",
+            f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account",
+            json=clean_payload
+        )
+        account_id = account_response.json()["id"]
 
     return {
         "message": "Lead converted to a real Account",
