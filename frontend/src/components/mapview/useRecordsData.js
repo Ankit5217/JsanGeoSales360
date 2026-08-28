@@ -76,6 +76,11 @@ export function useRecordsData() {
           oppValue: 0,
           discoverySource: lead.Discovery_Source__c || "Salesforce Lead",
           validation: lead.GIS_Validation_Status__c || "Pending",
+          status: lead.Status || null,
+          // A closed Lead (converted or not) is done, not a stop still
+          // waiting on a visit - keeps it out of Next-Best-Stop and off
+          // the checkout flow, same as a Closed Won/Lost Opportunity.
+          isClosed: lead.Status === "Closed - Converted" || lead.Status === "Closed - Not Converted",
           lastVisit: lead.Last_Visit_Date__c || "-",
           nextVisit: lead.Next_Visit_Date__c || "-",
           visitStatus: lead.Last_Visit_Date__c ? "completed" : "pending"

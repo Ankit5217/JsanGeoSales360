@@ -202,8 +202,9 @@ function distanceBonus(distanceKm) {
 }
 
 // Ranks how worth visiting `record` is right now, given the rep's current
-// position. Returns null for records outside NEXT_BEST_STOP_RADIUS_KM or
-// closed opportunities - these aren't candidates, not zero-scored ones.
+// position. Returns null for records outside NEXT_BEST_STOP_RADIUS_KM, or
+// for a closed Lead/Opportunity - these aren't candidates, not zero-scored
+// ones (a closed Lead is done, not a stop still waiting on a visit).
 // Two lenses: accounts/leads are visit-driven (overdue days + priority),
 // opportunities are deal-driven (stage progress + value) since they carry
 // no real lastVisit/priority of their own (see useRecordsData.js).
@@ -215,6 +216,8 @@ export function calculateNextBestStopScore(record, currentPos) {
 
     const distancePart = distanceBonus(distanceKm);
     const distanceLabel = `${distanceKm.toFixed(1)} km away`;
+
+    if (record.type === "lead" && record.isClosed) return null;
 
     if (record.type === "opportunity") {
         if (record.stage === "Closed Won" || record.stage === "Closed Lost") return null;

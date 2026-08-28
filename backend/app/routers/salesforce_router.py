@@ -367,6 +367,13 @@ def delete_existing_visit(visit_id: str):
 
 @router.post("/evidence")
 def create_new_evidence(evidence: ValidationEvidenceCreate):
+    # Status__c always starts Pending, enforced server-side - the UI
+    # already hardcodes this, but that alone doesn't stop a direct API
+    # call (curl, devtools, a queued offline record edited in IndexedDB)
+    # from self-approving, which is exactly the gap PUT /evidence/{id}'s
+    # require_role("ADMIN", "SALES_MANAGER") was added to close.
+    evidence.Status__c = "Pending"
+
     return create_evidence(evidence)
 
 

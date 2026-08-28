@@ -848,28 +848,15 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
 
     lead_id = lead_response.json()["id"]
 
-    candidate_lat = candidate.get("Location__Latitude__s")
-    candidate_lng = candidate.get("Location__Longitude__s")
-
-    if candidate_lat is not None and candidate_lng is not None:
-        # Carry forward the candidate's own location (its original random
-        # placeholder, or a real correction someone made to it) instead of
-        # generating an unrelated new random point - previously every
-        # conversion silently discarded it.
-        sf_request(
-            "PATCH",
-            f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead/{lead_id}",
-            json={
-                "Location__Latitude__s": candidate_lat,
-                "Location__Longitude__s": candidate_lng
-            }
-        )
-        lat, lng = candidate_lat, candidate_lng
-    else:
-        lat, lng = _assign_random_location("Lead", lead_id)
-
-    _assign_territory_by_point("Lead", lead_id, lat, lng, "Territory_ID__c")
-
+    # Mark the candidate converted right away, before anything else that
+    # could fail - the duplicate-conversion guard above checks exactly this
+    # field, so writing it last (as this used to) meant a location/territory
+    # failure after a successful Lead creation left the candidate looking
+    # unconverted, and retrying created a second Lead for the same
+    # candidate. Location/territory below are now best-effort: if either
+    # fails, the Lead still exists and is correctly linked, and "Sync
+    # location to Lead" (sync_discovery_candidate_location_to_lead) is
+    # there as a manual fallback to finish the location/territory part.
     sf_request(
         "PATCH",
         detail_url,
@@ -877,6 +864,36 @@ def convert_discovery_candidate_to_lead(candidate_id: str):
             "Related_Lead__c": lead_id
         }
     )
+
+    candidate_lat = candidate.get("Location__Latitude__s")
+    candidate_lng = candidate.get("Location__Longitude__s")
+
+    try:
+        if candidate_lat is not None and candidate_lng is not None:
+            # Carry forward the candidate's own location (its original
+            # random placeholder, or a real correction someone made to it)
+            # instead of generating an unrelated new random point -
+            # previously every conversion silently discarded it.
+            sf_request(
+                "PATCH",
+                f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead/{lead_id}",
+                json={
+                    "Location__Latitude__s": candidate_lat,
+                    "Location__Longitude__s": candidate_lng
+                }
+            )
+            lat, lng = candidate_lat, candidate_lng
+        else:
+            lat, lng = _assign_random_location("Lead", lead_id)
+
+        _assign_territory_by_point("Lead", lead_id, lat, lng, "Territory_ID__c")
+    except Exception:
+        logger.exception(
+            "Location/territory assignment failed for Lead %s converted "
+            "from Discovery Candidate %s - Lead exists and is linked, "
+            "location can be finished later via sync-location",
+            lead_id, candidate_id
+        )
 
     return {
         "message": "Discovery Candidate converted to Lead successfully",
@@ -2866,6 +2883,8 @@ def get_leads_map():
         Id,
         Name,
         Company,
+        Status,
+        Last_Visit_Date__c,
         Location__Latitude__s,
         Location__Longitude__s,
         Sales_Priority__c,
