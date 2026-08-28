@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends
-from app.auth import require_role
+from app.auth import require_role, get_current_user
 from app.realtime import broadcast_event
 from app.services.salesforce_service import update_account
 from app.salesforce_client import get_salesforce_users
@@ -322,7 +322,18 @@ def routes(route_id: str):
     return delete_route(route_id)
 
 @router.post("/visits")
-def create_new_visit(visit: FieldVisitCreate):
+def create_new_visit(
+    visit: FieldVisitCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    # Representative__c is always set server-side from the logged-in
+    # user's mapped Salesforce User (APP_USERS' "sf_user_id"), never taken
+    # from the client - the app has no other trustworthy way to know who
+    # actually performed the visit, and a client-supplied value could
+    # misattribute (or spoof) someone else's visit. Stays None - "Not
+    # Assigned" in the UI - for a login with no sf_user_id configured.
+    visit.Representative__c = current_user.get("sf_user_id")
+
     return create_visit(visit)
 
 

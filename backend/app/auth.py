@@ -64,13 +64,18 @@ def authenticate_user(username: str, password: str):
         ):
             return {
                 "username": username,
-                "role": user.get("role")
+                "role": user.get("role"),
+                # Optional: the real Salesforce User this login represents,
+                # set via APP_USERS' "sf_user_id" - lets checkout attribute
+                # a Field_Visit__c's Representative__c lookup to a real
+                # person instead of leaving it blank. None when unset.
+                "sf_user_id": user.get("sf_user_id")
             }
 
     return None
 
 
-def create_access_token(username: str, role: str) -> str:
+def create_access_token(username: str, role: str, sf_user_id: str | None = None) -> str:
     if not JWT_SECRET_KEY:
         raise RuntimeError("JWT_SECRET_KEY is not set")
 
@@ -81,6 +86,7 @@ def create_access_token(username: str, role: str) -> str:
     payload = {
         "sub": username,
         "role": role,
+        "sf_user_id": sf_user_id,
         "exp": expire
     }
 
@@ -110,7 +116,8 @@ def decode_token(token: str):
 
     return {
         "username": username,
-        "role": payload.get("role")
+        "role": payload.get("role"),
+        "sf_user_id": payload.get("sf_user_id")
     }
 
 

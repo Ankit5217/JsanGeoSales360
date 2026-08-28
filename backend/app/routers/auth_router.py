@@ -28,7 +28,7 @@ def login(payload: LoginRequest):
             detail="Invalid username or password"
         )
 
-    token = create_access_token(user["username"], user["role"])
+    token = create_access_token(user["username"], user["role"], user.get("sf_user_id"))
 
     return LoginResponse(
         access_token=token,
