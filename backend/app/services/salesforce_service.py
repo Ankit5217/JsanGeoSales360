@@ -337,9 +337,14 @@ def update_account(account_id: str, account: AccountUpdate):
 
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account/{account_id}"
 
+    # exclude_unset (not exclude_none): a field the caller left out of the
+    # request body is untouched, but one explicitly sent as null (e.g.
+    # clearing Last_Visit_Date__c to re-open a record for a fresh visit)
+    # really does clear it in Salesforce - exclude_none would silently
+    # drop that null and leave the old value in place.
     payload = account.model_dump(
         mode="json",
-        exclude_none=True
+        exclude_unset=True
     )
 
     logger.info("Updating Salesforce Account %s: %s", account_id, payload)
@@ -362,9 +367,12 @@ def update_lead(lead_id: str, lead_data):
 
     url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead/{lead_id}"
 
+    # Same exclude_unset reasoning as update_account - lets an explicit
+    # null (clearing Last_Visit_Date__c to re-open a Lead) actually clear
+    # the field in Salesforce instead of being silently dropped.
     payload = lead_data.model_dump(
         mode="json",
-        exclude_none=True
+        exclude_unset=True
     )
 
     logger.info("Updating Salesforce Lead %s: %s", lead_id, payload)
@@ -420,6 +428,7 @@ def get_leads():
         Email,
         Sales_Priority__c,
         GIS_Validation_Status__c,
+        Last_Visit_Date__c,
         Location__Latitude__s,
         Location__Longitude__s,
         Territory_ID__c
@@ -453,6 +462,7 @@ def get_leads():
             "Email": record.get("Email"),
             "Sales_Priority__c": record.get("Sales_Priority__c"),
             "GIS_Validation_Status__c": record.get("GIS_Validation_Status__c"),
+            "Last_Visit_Date__c": record.get("Last_Visit_Date__c"),
             "Location__Latitude__s": record.get("Location__Latitude__s"),
             "Location__Longitude__s": record.get("Location__Longitude__s"),
             "Territory_ID__c": record.get("Territory_ID__c")

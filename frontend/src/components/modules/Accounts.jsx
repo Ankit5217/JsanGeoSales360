@@ -12,6 +12,10 @@ const ACCOUNT_TYPES = [
     "Other"
 ];
 
+// The only two GIS_Validation_Status__c values this app ever writes -
+// confirmed valid picklist values, not guessed.
+const GIS_VALIDATION_STATUSES = ["Validated", "Pending"];
+
 export default function Accounts() {
 
     const { can } = useUser();
@@ -27,7 +31,9 @@ export default function Accounts() {
         name: "",
         phone: "",
         type: ACCOUNT_TYPES[0],
-        billingCity: ""
+        billingCity: "",
+        validationStatus: "",
+        lastVisitDate: ""
     });
     const [formError, setFormError] = useState("");
     const [formSubmitting, setFormSubmitting] = useState(false);
@@ -140,7 +146,9 @@ export default function Accounts() {
             name: "",
             phone: "",
             type: ACCOUNT_TYPES[0],
-            billingCity: ""
+            billingCity: "",
+            validationStatus: "",
+            lastVisitDate: ""
         });
 
         setEditingAccountId(null);
@@ -168,7 +176,9 @@ export default function Accounts() {
             name: account.Name || "",
             phone: account.Phone || "",
             type: account.Type || ACCOUNT_TYPES[0],
-            billingCity: account.BillingCity || ""
+            billingCity: account.BillingCity || "",
+            validationStatus: account.GIS_Validation_Status__c || "",
+            lastVisitDate: account.Last_Visit_Date__c || ""
         });
 
         setFormError("");
@@ -206,6 +216,13 @@ export default function Accounts() {
             };
 
             if (editingAccountId) {
+                // Only on edit, and sent explicitly even when blank - a
+                // blank Validation Status/Last Visit Date here means
+                // "clear it" (e.g. reopening a closed record for a fresh
+                // visit), not "leave it alone".
+                payload.GIS_Validation_Status__c = formValues.validationStatus || null;
+                payload.Last_Visit_Date__c = formValues.lastVisitDate || null;
+
                 await updateAccount(editingAccountId, payload);
             } else {
                 await createAccount(payload);
@@ -449,6 +466,37 @@ export default function Accounts() {
                             style={fieldInputStyle}
                         />
                     </div>
+
+                    {editingAccountId && (
+                        <>
+                            <div>
+                                <label style={fieldLabelStyle}>Validation Status</label>
+                                <select
+                                    value={formValues.validationStatus}
+                                    onChange={e => setFormValues(prev => ({ ...prev, validationStatus: e.target.value }))}
+                                    style={fieldInputStyle}
+                                >
+                                    <option value="">- Clear -</option>
+                                    {GIS_VALIDATION_STATUSES.map(status => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={fieldLabelStyle}>Last Visit Date</label>
+                                <input
+                                    type="date"
+                                    value={formValues.lastVisitDate}
+                                    onChange={e => setFormValues(prev => ({ ...prev, lastVisitDate: e.target.value }))}
+                                    style={fieldInputStyle}
+                                />
+                                <div style={{ fontSize: "11px", color: "#888", marginTop: "3px" }}>
+                                    Leave blank to clear it (e.g. to re-open this record for a fresh visit).
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
                         <button

@@ -11,6 +11,10 @@ const LEAD_STATUSES = [
     "Closed - Not Converted"
 ];
 
+// The only two GIS_Validation_Status__c values this app ever writes -
+// confirmed valid picklist values, not guessed.
+const GIS_VALIDATION_STATUSES = ["Validated", "Pending"];
+
 const LEAD_STATUS_COLORS = {
     "Open - Not Contacted": { bg: "#e3f2fd", color: "#1565c0" },
     "Working - Contacted": { bg: "#fff3e0", color: "#ef6c00" },
@@ -60,7 +64,9 @@ export default function Leads() {
         company: "",
         phone: "",
         email: "",
-        status: LEAD_STATUSES[0]
+        status: LEAD_STATUSES[0],
+        validationStatus: "",
+        lastVisitDate: ""
     });
     const [formError, setFormError] = useState("");
     const [formSubmitting, setFormSubmitting] = useState(false);
@@ -118,7 +124,9 @@ export default function Leads() {
             company: "",
             phone: "",
             email: "",
-            status: LEAD_STATUSES[0]
+            status: LEAD_STATUSES[0],
+            validationStatus: "",
+            lastVisitDate: ""
         });
 
         setEditingLeadId(null);
@@ -148,7 +156,9 @@ export default function Leads() {
             company: lead.Company || "",
             phone: lead.Phone || "",
             email: lead.Email || "",
-            status: lead.Status || LEAD_STATUSES[0]
+            status: lead.Status || LEAD_STATUSES[0],
+            validationStatus: lead.GIS_Validation_Status__c || "",
+            lastVisitDate: lead.Last_Visit_Date__c || ""
         });
 
         setFormError("");
@@ -199,6 +209,13 @@ export default function Leads() {
             };
 
             if (editingLeadId) {
+                // Only on edit, and sent explicitly even when blank - a
+                // blank Validation Status/Last Visit Date here means
+                // "clear it" (e.g. reopening a closed lead for a fresh
+                // visit), not "leave it alone".
+                payload.GIS_Validation_Status__c = formValues.validationStatus || null;
+                payload.Last_Visit_Date__c = formValues.lastVisitDate || null;
+
                 await updateLead(editingLeadId, payload);
             } else {
                 await createLead(payload);
@@ -455,6 +472,37 @@ export default function Leads() {
                             ))}
                         </select>
                     </div>
+
+                    {editingLeadId && (
+                        <>
+                            <div>
+                                <label style={fieldLabelStyle}>Validation Status</label>
+                                <select
+                                    value={formValues.validationStatus}
+                                    onChange={e => updateFormField("validationStatus", e.target.value)}
+                                    style={fieldInputStyle}
+                                >
+                                    <option value="">- Clear -</option>
+                                    {GIS_VALIDATION_STATUSES.map(status => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={fieldLabelStyle}>Last Visit Date</label>
+                                <input
+                                    type="date"
+                                    value={formValues.lastVisitDate}
+                                    onChange={e => updateFormField("lastVisitDate", e.target.value)}
+                                    style={fieldInputStyle}
+                                />
+                                <div style={{ fontSize: "11px", color: "#888", marginTop: "3px" }}>
+                                    Leave blank to clear it (e.g. to re-open this record for a fresh visit).
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
                         <button
