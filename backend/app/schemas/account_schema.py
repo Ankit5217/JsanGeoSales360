@@ -17,4 +17,5 @@ class AccountUpdate(BaseModel):
 
     # GIS / Field Visit fields
     Last_Visit_Date__c: date | None = None
+    Next_Visit_Date__c: date | None = None
     GIS_Validation_Status__c: str | None = None

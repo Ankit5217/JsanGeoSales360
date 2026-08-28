@@ -34,7 +34,8 @@ export default function Accounts() {
         type: ACCOUNT_TYPES[0],
         billingCity: "",
         validationStatus: "",
-        lastVisitDate: ""
+        lastVisitDate: "",
+        nextVisitDate: ""
     });
     const [formError, setFormError] = useState("");
     const [formSubmitting, setFormSubmitting] = useState(false);
@@ -164,7 +165,8 @@ export default function Accounts() {
             type: ACCOUNT_TYPES[0],
             billingCity: "",
             validationStatus: "",
-            lastVisitDate: ""
+            lastVisitDate: "",
+            nextVisitDate: ""
         });
 
         setEditingAccountId(null);
@@ -194,7 +196,8 @@ export default function Accounts() {
             type: account.Type || ACCOUNT_TYPES[0],
             billingCity: account.BillingCity || "",
             validationStatus: account.GIS_Validation_Status__c || "",
-            lastVisitDate: account.Last_Visit_Date__c || ""
+            lastVisitDate: account.Last_Visit_Date__c || "",
+            nextVisitDate: account.Next_Visit_Date__c || ""
         });
 
         setFormError("");
@@ -233,11 +236,12 @@ export default function Accounts() {
 
             if (editingAccountId) {
                 // Only on edit, and sent explicitly even when blank - a
-                // blank Validation Status/Last Visit Date here means
+                // blank Validation Status/Last/Next Visit Date here means
                 // "clear it" (e.g. reopening a closed record for a fresh
                 // visit), not "leave it alone".
                 payload.GIS_Validation_Status__c = formValues.validationStatus || null;
                 payload.Last_Visit_Date__c = formValues.lastVisitDate || null;
+                payload.Next_Visit_Date__c = formValues.nextVisitDate || null;
 
                 await updateAccount(editingAccountId, payload);
             } else {
@@ -509,6 +513,19 @@ export default function Accounts() {
                                 />
                                 <div style={{ fontSize: "11px", color: "#888", marginTop: "3px" }}>
                                     Leave blank to clear it (e.g. to re-open this record for a fresh visit).
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={fieldLabelStyle}>Next Visit Date</label>
+                                <input
+                                    type="date"
+                                    value={formValues.nextVisitDate}
+                                    onChange={e => setFormValues(prev => ({ ...prev, nextVisitDate: e.target.value }))}
+                                    style={fieldInputStyle}
+                                />
+                                <div style={{ fontSize: "11px", color: "#888", marginTop: "3px" }}>
+                                    Schedule the next visit - shows in this list and drives overdue tracking.
                                 </div>
                             </div>
                         </>
