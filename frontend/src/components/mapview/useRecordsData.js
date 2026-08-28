@@ -7,6 +7,7 @@ import {
     getTerritories
 } from "../../services/salesforceApi";
 import { buildClosedWonRevenueMap } from "../../utils/accountRevenue";
+import { formatAccountRecord, formatLeadRecord } from "./recordTransform.js";
 
 const INITIAL_RECORDS = [
   { id: 'ACC-1001', name: 'Meridian Textiles', type: 'customer', territory: 'T1', lat: 17.385, lng: 78.4867, priority: 'High', owner: 'Ananya Rao', oppValue: 850000, discoverySource: '—', validation: 'Validated', lastVisit: '2026-07-12', nextVisit: '2026-08-05', visitStatus: 'pending' },
@@ -32,26 +33,7 @@ export function useRecordsData() {
       const accounts = await getAccounts();
 
       const formattedAccounts = accounts
-        .map(account => ({
-          id: account.Id,
-          name: account.Name,
-          type: "customer",
-          territory: account.Territory_ID__c,
-          lat: account.Location__Latitude__s,
-          lng: account.Location__Longitude__s,
-          priority: account.Sales_Priority__c || "Medium",
-          owner: account.Owner?.Name || "Not Assigned",
-          oppValue: account.AnnualRevenue || 0,
-          discoverySource: account.Discovery_Source__c || "-",
-          // A blank GIS_Validation_Status__c means "not yet validated," not
-          // "validated" - defaulting to "Validated" here previously made
-          // every unvalidated account/lead look validated on the GIS Map
-          // and in the analytics/scoring that reads from this hook.
-          validation: account.GIS_Validation_Status__c || "Pending",
-          lastVisit: account.Last_Visit_Date__c || "-",
-          nextVisit: account.Next_Visit_Date__c || "-",
-          visitStatus: account.Last_Visit_Date__c ? "completed" : "pending"
-        }))
+        .map(formatAccountRecord)
         .filter(account => account.lat != null && account.lng != null);
 
       setRecords(formattedAccounts);
@@ -65,27 +47,7 @@ export function useRecordsData() {
       const leads = await getLeads();
 
       const formattedLeads = leads
-        .map(lead => ({
-          id: lead.Id,
-          name: lead.Name,
-          type: "lead",
-          territory: lead.Territory_ID__c || "Unassigned",
-          lat: lead.Location__Latitude__s,
-          lng: lead.Location__Longitude__s,
-          priority: lead.Sales_Priority__c || "Medium",
-          owner: lead.Owner?.Name || "Not Assigned",
-          oppValue: 0,
-          discoverySource: lead.Discovery_Source__c || "Salesforce Lead",
-          validation: lead.GIS_Validation_Status__c || "Pending",
-          status: lead.Status || null,
-          // A closed Lead (converted or not) is done, not a stop still
-          // waiting on a visit - keeps it out of Next-Best-Stop and off
-          // the checkout flow, same as a Closed Won/Lost Opportunity.
-          isClosed: lead.Status === "Closed - Converted" || lead.Status === "Closed - Not Converted",
-          lastVisit: lead.Last_Visit_Date__c || "-",
-          nextVisit: lead.Next_Visit_Date__c || "-",
-          visitStatus: lead.Last_Visit_Date__c ? "completed" : "pending"
-        }))
+        .map(formatLeadRecord)
         .filter(lead => lead.lat != null && lead.lng != null);
 
       setLeadRecords(formattedLeads);

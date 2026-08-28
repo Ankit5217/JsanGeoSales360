@@ -7,7 +7,7 @@
 // salesTrend is the exception: it's computed from real Opportunities
 // (passed in separately) since Accounts have no historical revenue data.
 
-import { calculateAIScore, calculateRevenueRisk, calculateTerritoryScore } from "./mapviewUtils";
+import { calculateAIScore, calculateRevenueRisk, calculateTerritoryScore } from "./mapviewUtils.js";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { updateAccount, updateLead, createFieldVisit, createOpportunity, convertLeadToAccount } from "../../services/salesforceApi";
 import { VISIT_OUTCOMES } from "../modules/FieldVisits";
-import { OPPORTUNITY_STAGES } from "../modules/Opportunities";
+import { OPPORTUNITY_STAGES } from "../../config/opportunityStages";
 import { GEOFENCE_RADIUS_METERS, getCurrentPosition, haversine } from "./mapviewUtils";
 import { getStatusForOutcome, isOpportunityOutcome } from "./checkoutOutcome";
 import { enqueue } from "../../offline/queue";

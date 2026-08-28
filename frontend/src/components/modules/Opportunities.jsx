@@ -5,21 +5,7 @@ import {
     updateOpportunity,
     getAllAccounts
 } from "../../services/salesforceApi";
-
-// Real Opportunity.StageName picklist values, verified via Salesforce
-// describe - not guessed, since an invalid value is a validation error.
-export const OPPORTUNITY_STAGES = [
-    "Prospecting",
-    "Qualification",
-    "Needs Analysis",
-    "Value Proposition",
-    "Id. Decision Makers",
-    "Perception Analysis",
-    "Proposal/Price Quote",
-    "Negotiation/Review",
-    "Closed Won",
-    "Closed Lost"
-];
+import { OPPORTUNITY_STAGES } from "../../config/opportunityStages";
 
 const STAGE_COLORS = {
     "Closed Won": { bg: "#e8f5e9", color: "#2e7d32" },

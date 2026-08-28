@@ -1,4 +1,11 @@
-import jsPDF from "jspdf";
+// A plain default import resolves differently under Node's "node" package
+// export condition than under Vite's browser build - a default import
+// alone fails in Node ("jsPDF is not a constructor"). This works under
+// both, verified live in each: needed so the Node report-generation
+// script (generate-executive-report.mjs) can reuse generateExecutiveReport
+// unmodified.
+import * as jsPDFModule from "jspdf";
+const jsPDF = jsPDFModule.jsPDF || jsPDFModule.default;
 
 function downloadCsv(filename, headers, rows) {
   const csvContent = [
@@ -42,7 +49,7 @@ export function exportAIActivity(liveActivityFeed) {
 
 // analytics is the object returned by computeExecutiveAnalytics - only the
 // fields the report actually reads are destructured below.
-export function generateExecutiveReport(analytics) {
+export function generateExecutiveReport(analytics, { save = true } = {}) {
   const {
     executiveSummary,
     salesForecast,
@@ -165,6 +172,10 @@ export function generateExecutiveReport(analytics) {
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
   doc.text("JSAN GeoSales 360 | AI-powered GIS Sales Intelligence", pageWidth / 2, pageHeight - 10, { align: "center" });
+
+  if (!save) {
+    return doc.output("arraybuffer");
+  }
 
   doc.save("JSAN_GeoSales_Executive_Report.pdf");
 }

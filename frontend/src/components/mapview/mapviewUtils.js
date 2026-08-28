@@ -1,7 +1,7 @@
 // Pure helper functions and constants used across the GIS Map view.
 // Split out of mapview.jsx (Phase 9) - no behavior change, just moved.
 
-import { OPPORTUNITY_STAGES } from "../modules/Opportunities";
+import { OPPORTUNITY_STAGES } from "../../config/opportunityStages.js";
 
 export const TYPE_COLOR = { customer: '#0B2E4F', lead: '#0E8388', opportunity: '#D98F00', prospect: '#2E8B57', duplicate: '#C1443C' };
 export const TYPE_LABEL = { customer: 'Existing Customer', lead: 'Existing Lead', opportunity: 'High-value Opportunity', prospect: 'New Prospect', duplicate: 'Possible Duplicate' };

@@ -5,11 +5,15 @@ from fastapi import Depends, FastAPI, Query, Request, WebSocket, WebSocketDiscon
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import json
+                                                                                                                                                                                                                                                            
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.auth import get_current_user, decode_token
 from app.routers.auth_router import router as auth_router
 from app.routers.salesforce_router import router as salesforce_router
+from app.routers.reports_router import router as reports_router
 from app.realtime import connect_client, disconnect_client, broadcast_event, send_to_user, record_position, clear_position
+from app.services.report_scheduler_service import send_daily_report, maybe_catch_up_on_startup
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,6 +73,7 @@ app.include_router(
     salesforce_router,
     dependencies=[Depends(get_current_user)]
 )
+app.include_router(reports_router)
 
 
 # ============================================================
@@ -90,6 +95,42 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
+    )
+
+
+# ============================================================
+# SCHEDULED EXECUTIVE REPORT EMAILS
+# ============================================================
+
+@app.on_event("startup")
+def start_report_scheduler():
+    if not os.getenv("SMTP_USERNAME"):
+        logger.warning(
+            "SMTP_USERNAME is not set - scheduled executive report emails "
+            "are disabled until backend/.env is configured."
+        )
+        return
+
+    # The backend isn't a persistent service - if it wasn't running at
+    # today's send time, this sends immediately instead of silently
+    # skipping the day (guarded so it only fires once per day).
+    maybe_catch_up_on_startup()
+
+    send_hour = int(os.getenv("REPORT_SEND_HOUR_IST", "8"))
+
+    scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
+    scheduler.add_job(
+        send_daily_report,
+        "cron",
+        hour=send_hour,
+        minute=0,
+        id="daily_executive_report",
+        misfire_grace_time=3600
+    )
+    scheduler.start()
+
+    logger.info(
+        "Scheduled executive report emails: daily at %02d:00 IST", send_hour
     )
 
 

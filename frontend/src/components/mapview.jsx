@@ -4,7 +4,7 @@ import useIsMobile from "../hooks/useIsMobile";
 import { MapContainer, TileLayer, CircleMarker, LayerGroup, Polygon, Polyline, Tooltip, ZoomControl } from 'react-leaflet';
 import "leaflet/dist/leaflet.css";
 import { VISIT_OUTCOMES } from "./modules/FieldVisits";
-import { OPPORTUNITY_STAGES } from "./modules/Opportunities";
+import { OPPORTUNITY_STAGES } from "../config/opportunityStages";
 import { isOpportunityOutcome } from "./mapview/checkoutOutcome";
 import {
     PRIORITY_COLOR,
