@@ -89,6 +89,27 @@ export async function updateLead(leadId, data) {
     return await response.json();
 }
 
+export async function convertLeadToAccount(leadId) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/leads/${leadId}/convert-to-account`,
+        { method: "POST" }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to convert lead to account"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function createLead(data) {
 
     const response = await authFetch(

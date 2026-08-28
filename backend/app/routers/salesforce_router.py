@@ -36,6 +36,7 @@ from app.services.salesforce_service import  (
     update_discovery_candidate,
     delete_discovery_candidate,
     convert_discovery_candidate_to_lead,
+    convert_lead_to_account,
     sync_discovery_candidate_location_to_lead,
     check_discovery_candidate_duplicates,
     create_territory,
@@ -226,6 +227,10 @@ def add_lead(lead: LeadCreate):
 @router.delete("/leads/{lead_id}")
 def remove_lead(lead_id: str):
     return delete_lead(lead_id)
+
+@router.post("/leads/{lead_id}/convert-to-account")
+def convert_lead_to_account_route(lead_id: str):
+    return convert_lead_to_account(lead_id)
 
 @router.post("/opportunities")
 def add_opportunity(opportunity: OpportunityCreate):

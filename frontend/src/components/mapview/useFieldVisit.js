@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { updateAccount, updateLead, createFieldVisit, createOpportunity } from "../../services/salesforceApi";
+import { updateAccount, updateLead, createFieldVisit, createOpportunity, convertLeadToAccount } from "../../services/salesforceApi";
 import { VISIT_OUTCOMES } from "../modules/FieldVisits";
 import { OPPORTUNITY_STAGES } from "../modules/Opportunities";
 import { GEOFENCE_RADIUS_METERS, getCurrentPosition, haversine } from "./mapviewUtils";
@@ -168,21 +168,30 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
       }
 
       // "Opportunity Created" carries real deal details captured on-site.
-      // Accounts already have an Id an Opportunity can genuinely link to
-      // (AccountId); Leads don't have an equivalent lookup on Opportunity
-      // in this org, so that link is a soft one - the deal name includes
-      // the lead's name, and a breadcrumb goes on this visit's own notes.
+      // A Lead reaching this outcome just became a real deal, so it also
+      // becomes a real Account here (convertLeadToAccount) - the Lead was
+      // only ever a prospect, and a "won" one shouldn't be left with no
+      // actual customer record behind it. The new Opportunity links to
+      // that Account like any other; Accounts checking out already have
+      // an Id to link to directly.
       let opportunityNoteSuffix = "";
 
       if (isOpportunityOutcome(visitOutcome) && dealName.trim()) {
         const opportunityName = `${selected.name} - ${dealName.trim()}`;
+
+        let opportunityAccountId = selected.type === "customer" ? selected.id : null;
+
+        if (selected.type === "lead") {
+          const conversion = await convertLeadToAccount(selected.id);
+          opportunityAccountId = conversion.account_id;
+        }
 
         await createOpportunity({
           Name: opportunityName,
           StageName: dealStage,
           CloseDate: defaultCloseDate(),
           Amount: dealAmount ? Number(dealAmount) : null,
-          AccountId: selected.type === "customer" ? selected.id : null
+          AccountId: opportunityAccountId
         });
 
         opportunityNoteSuffix = `\n[Opportunity created: ${opportunityName}]`;

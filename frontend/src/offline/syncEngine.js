@@ -1,6 +1,6 @@
 import { listPending, updateStatus, remove, subscribe } from "./queue";
 import { getToken } from "../config/apiBase";
-import { updateLead, updateAccount, createFieldVisit, createEvidence, createOpportunity } from "../services/salesforceApi";
+import { updateLead, updateAccount, createFieldVisit, createEvidence, createOpportunity, convertLeadToAccount } from "../services/salesforceApi";
 import { getStatusForOutcome, isOpportunityOutcome } from "../components/mapview/checkoutOutcome";
 
 function defaultCloseDate() {
@@ -46,20 +46,27 @@ async function syncCheckout(payload) {
     throw new Error("Salesforce update failed while syncing a queued check-out.");
   }
 
-  // Same soft-link reasoning as the live checkout path in useFieldVisit.js -
-  // Accounts get a real AccountId on the Opportunity, Leads get a name +
-  // visit-notes breadcrumb since Opportunity has no Lead lookup in this org.
+  // Same conversion reasoning as the live checkout path in useFieldVisit.js -
+  // a Lead reaching "Opportunity Created" becomes a real Account here, and
+  // the new Opportunity links to it like any other.
   let opportunityNoteSuffix = "";
 
   if (isOpportunityOutcome(visitOutcome) && dealName && dealName.trim()) {
     const opportunityName = `${selectedName} - ${dealName.trim()}`;
+
+    let opportunityAccountId = selectedType === "customer" ? selectedId : null;
+
+    if (selectedType === "lead") {
+      const conversion = await convertLeadToAccount(selectedId);
+      opportunityAccountId = conversion.account_id;
+    }
 
     await createOpportunity({
       Name: opportunityName,
       StageName: dealStage,
       CloseDate: defaultCloseDate(),
       Amount: dealAmount ? Number(dealAmount) : null,
-      AccountId: selectedType === "customer" ? selectedId : null
+      AccountId: opportunityAccountId
     });
 
     opportunityNoteSuffix = `\n[Opportunity created: ${opportunityName}]`;

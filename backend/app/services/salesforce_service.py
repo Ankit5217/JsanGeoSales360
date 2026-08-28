@@ -487,6 +487,63 @@ def create_lead(lead: LeadCreate):
 
     return result
 
+def convert_lead_to_account(lead_id: str):
+    """
+    Turns a Lead that just became a real deal (checkout outcome
+    "Opportunity Created") into a genuine Account - carrying over its
+    location/territory/priority/validation so the GIS Map and future
+    service visits continue from the same place, instead of a "won" Lead
+    just sitting there with no real customer record behind it.
+
+    This app doesn't call Salesforce's native Convert Lead action -
+    Lead.ConvertedAccountId/IsConverted are system-managed fields Salesforce
+    only writes through that dedicated process, not through a plain record
+    update - so there's no field to mark on the Lead linking it to the new
+    Account. The correspondence is by Name/location, the same soft-link
+    reasoning already used for the Opportunity this pairs with. The Lead
+    itself is left as-is; its Status already reads "Closed - Converted"
+    from the same checkout that triggers this.
+    """
+    lead_url = f"{INSTANCE_URL}/services/data/v64.0/sobjects/Lead/{lead_id}"
+
+    response = sf_request(
+        "GET",
+        lead_url,
+        params={
+            "fields": (
+                "Company,Phone,Location__Latitude__s,Location__Longitude__s,"
+                "Sales_Priority__c,GIS_Validation_Status__c,Territory_ID__c,"
+                "Last_Visit_Date__c"
+            )
+        }
+    )
+
+    lead = response.json()
+
+    account_payload = {
+        "Name": lead.get("Company"),
+        "Phone": lead.get("Phone"),
+        "Location__Latitude__s": lead.get("Location__Latitude__s"),
+        "Location__Longitude__s": lead.get("Location__Longitude__s"),
+        "Sales_Priority__c": lead.get("Sales_Priority__c"),
+        "GIS_Validation_Status__c": lead.get("GIS_Validation_Status__c"),
+        "Territory_ID__c": lead.get("Territory_ID__c"),
+        "Last_Visit_Date__c": lead.get("Last_Visit_Date__c")
+    }
+
+    account_response = sf_request(
+        "POST",
+        f"{INSTANCE_URL}/services/data/v64.0/sobjects/Account",
+        json={k: v for k, v in account_payload.items() if v is not None}
+    )
+
+    account_id = account_response.json()["id"]
+
+    return {
+        "message": "Lead converted to a real Account",
+        "account_id": account_id
+    }
+
 # Every Opportunity seeded into this org by Salesforce's demo data is
 # owned by this user ("OrgFarm EPIC"). Same pattern as SAMPLE_LEAD_IDS -
 # excluding it is how "only the ones I made" gets enforced, and it stays
