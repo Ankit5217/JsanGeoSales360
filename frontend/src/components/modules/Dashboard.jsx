@@ -10,6 +10,7 @@ import {
     getFieldVisits
 } from "../../services/salesforceApi";
 import { VISIT_OUTCOMES } from "./FieldVisits";
+import { buildClosedWonRevenueMap } from "../../utils/accountRevenue";
 import {
     ResponsiveContainer,
     BarChart,
@@ -112,7 +113,21 @@ export default function Dashboard() {
                     hasPermission("fieldVisits") ? getFieldVisits() : []
                 ]);
 
-                setAccounts(accountsData);
+                // AnnualRevenue is static and never reflects a deal
+                // actually closing - overlay each account's real Closed
+                // Won total where it has one, same as the GIS Map/Accounts
+                // module do.
+                const closedWonByAccountId = buildClosedWonRevenueMap(
+                    Array.isArray(opportunitiesData) ? opportunitiesData : []
+                );
+
+                setAccounts(accountsData.map(account => {
+                    const wonRevenue = closedWonByAccountId.get(account.Id);
+                    return wonRevenue != null
+                        ? { ...account, AnnualRevenue: wonRevenue }
+                        : account;
+                }));
+
                 setLeads(leadsData);
                 setOpportunities(opportunitiesData);
                 setDiscovery(discoveryData);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { getAllAccounts, createAccount, updateAccount } from "../../services/salesforceApi";
+import { getAllAccounts, createAccount, updateAccount, getOpportunities } from "../../services/salesforceApi";
 import { useUser } from "../../context/UserContext";
+import { buildClosedWonRevenueMap } from "../../utils/accountRevenue";
 
 const ACCOUNT_TYPES = [
     "Prospect",
@@ -116,7 +117,22 @@ export default function Accounts() {
 
                 }
 
-                setAccounts(data);
+                // AnnualRevenue is static and never reflects a deal
+                // actually closing - overlay each account's real Closed
+                // Won total where it has one, same as the GIS Map does.
+                const opportunities = await getOpportunities().catch(() => []);
+                const closedWonByAccountId = buildClosedWonRevenueMap(
+                    Array.isArray(opportunities) ? opportunities : []
+                );
+
+                const enrichedAccounts = data.map(account => {
+                    const wonRevenue = closedWonByAccountId.get(account.Id);
+                    return wonRevenue != null
+                        ? { ...account, AnnualRevenue: wonRevenue }
+                        : account;
+                });
+
+                setAccounts(enrichedAccounts);
 
             } catch (err) {
 

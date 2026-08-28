@@ -6,6 +6,7 @@ import {
     getOpportunities,
     getTerritories
 } from "../../services/salesforceApi";
+import { buildClosedWonRevenueMap } from "../../utils/accountRevenue";
 
 const INITIAL_RECORDS = [
   { id: 'ACC-1001', name: 'Meridian Textiles', type: 'customer', territory: 'T1', lat: 17.385, lng: 78.4867, priority: 'High', owner: 'Ananya Rao', oppValue: 850000, discoverySource: '—', validation: 'Validated', lastVisit: '2026-07-12', nextVisit: '2026-08-05', visitStatus: 'pending' },
@@ -170,16 +171,7 @@ export function useRecordsData() {
   // map's detail panel and the AI Executive Dashboard's revenue figures,
   // which both read oppValue off these same records, never disagree.
   const recordsWithRevenue = useMemo(() => {
-    const closedWonByAccountId = new Map();
-
-    allOpportunities
-      .filter(o => o.stage === "Closed Won" && o.account_id)
-      .forEach(o => {
-        closedWonByAccountId.set(
-          o.account_id,
-          (closedWonByAccountId.get(o.account_id) || 0) + (o.amount || 0)
-        );
-      });
+    const closedWonByAccountId = buildClosedWonRevenueMap(allOpportunities);
 
     return records.map(r => {
       const wonRevenue = closedWonByAccountId.get(r.id);
