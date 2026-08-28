@@ -1212,7 +1212,13 @@ def get_validation_evidence():
         Photo_URL__c,
         Validation_Date__c,
         Status__c,
-        Remarks__c
+        Remarks__c,
+        Account__c,
+        Account__r.Name,
+        Lead__c,
+        Lead__r.Name,
+        Verified_By__c,
+        Verified_By__r.Name
     FROM Validation_Evidence__c
     """
 
@@ -1231,6 +1237,15 @@ def get_validation_evidence():
     evidence = []
 
     for record in data["records"]:
+        account = record.get("Account__r") or {}
+        lead = record.get("Lead__r") or {}
+        # "Verified_By__c" is only ever set by this app when someone
+        # attaches the actual evidence (create or fulfill) - never by the
+        # separate Approve/Reject action, which stays audit-stamped in
+        # Remarks__c instead - so this reliably names the field rep who
+        # provided the evidence, not a reviewer.
+        submitted_by = record.get("Verified_By__r") or {}
+
         evidence.append({
             "id": record.get("Id"),
             "name": record.get("Name"),
@@ -1238,7 +1253,12 @@ def get_validation_evidence():
             "photo": record.get("Photo_URL__c"),
             "validation_date": record.get("Validation_Date__c"),
             "status": record.get("Status__c"),
-            "remarks": record.get("Remarks__c")
+            "remarks": record.get("Remarks__c"),
+            "account_id": record.get("Account__c"),
+            "account_name": account.get("Name"),
+            "lead_id": record.get("Lead__c"),
+            "lead_name": lead.get("Name"),
+            "submitted_by": submitted_by.get("Name")
         })
 
     return evidence
@@ -1492,7 +1512,11 @@ def update_evidence(evidence_id: str, evidence: ValidationEvidenceUpdate):
     }
 
 
-def fulfill_evidence(evidence_id: str, fulfill: ValidationEvidenceFulfill):
+def fulfill_evidence(
+    evidence_id: str,
+    fulfill: ValidationEvidenceFulfill,
+    sf_user_id: str | None = None
+):
     """
     Lets a field rep complete an evidence request an admin/manager logged
     with no photo yet - attaches the photo (reusing the same
@@ -1501,6 +1525,12 @@ def fulfill_evidence(evidence_id: str, fulfill: ValidationEvidenceFulfill):
     admin/manager reviews it via update_evidence.
     """
     payload = {}
+
+    if sf_user_id:
+        # Records who actually fulfilled the request - Verified_By__c is
+        # otherwise unused by this app's review flow, so it's safe to
+        # repurpose as "the rep who provided this evidence" here.
+        payload["Verified_By__c"] = sf_user_id
 
     if fulfill.Remarks__c is not None:
         payload["Remarks__c"] = fulfill.Remarks__c

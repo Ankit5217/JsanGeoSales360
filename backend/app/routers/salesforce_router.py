@@ -371,13 +371,24 @@ def delete_existing_visit(visit_id: str):
     return delete_visit(visit_id)
 
 @router.post("/evidence")
-def create_new_evidence(evidence: ValidationEvidenceCreate):
+def create_new_evidence(
+    evidence: ValidationEvidenceCreate,
+    current_user: dict = Depends(get_current_user)
+):
     # Status__c always starts Pending, enforced server-side - the UI
     # already hardcodes this, but that alone doesn't stop a direct API
     # call (curl, devtools, a queued offline record edited in IndexedDB)
     # from self-approving, which is exactly the gap PUT /evidence/{id}'s
     # require_role("ADMIN", "SALES_MANAGER") was added to close.
     evidence.Status__c = "Pending"
+
+    # Only credit the logged-in user as having provided the evidence when
+    # they're actually attaching a photo now. An admin/manager logging a
+    # bare request (no photo yet, for a field rep to fulfill later) hasn't
+    # provided anything themselves - Verified_By__c should stay empty
+    # until whoever calls PUT /evidence/{id}/fulfill actually does.
+    if evidence.photo_base64:
+        evidence.Verified_By__c = current_user.get("sf_user_id")
 
     return create_evidence(evidence)
 
@@ -396,9 +407,10 @@ def update_existing_evidence(
 @router.put("/evidence/{evidence_id}/fulfill")
 def fulfill_existing_evidence(
     evidence_id: str,
-    fulfill: ValidationEvidenceFulfill
+    fulfill: ValidationEvidenceFulfill,
+    current_user: dict = Depends(get_current_user)
 ):
-    return fulfill_evidence(evidence_id, fulfill)
+    return fulfill_evidence(evidence_id, fulfill, current_user.get("sf_user_id"))
 
 
 @router.delete("/evidence/{evidence_id}")

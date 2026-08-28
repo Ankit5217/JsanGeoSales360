@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getEvidence, createEvidence, updateEvidence, fulfillEvidence } from "../../services/salesforceApi";
+import { getEvidence, createEvidence, updateEvidence, fulfillEvidence, getAllAccounts, getAllLeads } from "../../services/salesforceApi";
 import { enqueue } from "../../offline/queue";
 import { useUser } from "../../context/UserContext";
 import { PERMISSIONS } from "../../config/rolePermissions";
@@ -27,7 +27,10 @@ const EMPTY_FORM = {
     photoBase64: "",
     photoFilename: "",
     validationDate: "",
-    remarks: ""
+    remarks: "",
+    // "" = not tied to a record; otherwise "account:<Id>" or "lead:<Id>",
+    // parsed back into Account__c/Lead__c on submit.
+    relatedTo: ""
 };
 
 // Downscales a captured photo before it ever reaches the offline queue -
@@ -81,6 +84,9 @@ export default function Evidence() {
     const [evidence, setEvidence] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [accounts, setAccounts] = useState([]);
+    const [leads, setLeads] = useState([]);
+
     const [showForm, setShowForm] = useState(false);
     const [formValues, setFormValues] = useState(EMPTY_FORM);
     const [formError, setFormError] = useState("");
@@ -101,13 +107,18 @@ export default function Evidence() {
     const [fulfillSubmitting, setFulfillSubmitting] = useState(false);
     const [fulfillError, setFulfillError] = useState("");
 
-    const totalColumns = 7 + (canReview ? 1 : 0) + (canUpload ? 1 : 0);
+    const totalColumns = 9 + (canReview ? 1 : 0) + (canUpload ? 1 : 0);
 
     useEffect(() => {
 
         loadEvidence();
 
-    }, []);
+        if (canUpload) {
+            getAllAccounts().then(data => setAccounts(Array.isArray(data) ? data : []));
+            getAllLeads().then(data => setLeads(Array.isArray(data) ? data : []));
+        }
+
+    }, [canUpload]);
 
     async function loadEvidence() {
 
@@ -186,6 +197,10 @@ export default function Evidence() {
         setFormError("");
         setFormNotice("");
 
+        const [relatedType, relatedId] = formValues.relatedTo
+            ? formValues.relatedTo.split(":")
+            : [null, null];
+
         const payload = {
             Name: formValues.name.trim(),
             Evidence_Type__c: formValues.type,
@@ -194,6 +209,8 @@ export default function Evidence() {
             // move it to Approved/Rejected, via the review actions below.
             Status__c: EVIDENCE_STATUSES[0],
             Remarks__c: formValues.remarks.trim() || null,
+            Account__c: relatedType === "account" ? relatedId : null,
+            Lead__c: relatedType === "lead" ? relatedId : null,
             photo_base64: formValues.photoBase64 || null,
             photo_filename: formValues.photoFilename || null
         };
@@ -480,6 +497,31 @@ export default function Evidence() {
                         </select>
                     </div>
 
+                    <div>
+                        <label style={fieldLabelStyle}>Related To</label>
+                        <select
+                            value={formValues.relatedTo}
+                            onChange={e => setFormValues(prev => ({ ...prev, relatedTo: e.target.value }))}
+                            style={fieldInputStyle}
+                        >
+                            <option value="">- None -</option>
+                            {accounts.length > 0 && (
+                                <optgroup label="Accounts">
+                                    {accounts.map(a => (
+                                        <option key={a.Id} value={`account:${a.Id}`}>{a.Name}</option>
+                                    ))}
+                                </optgroup>
+                            )}
+                            {leads.length > 0 && (
+                                <optgroup label="Leads">
+                                    {leads.map(l => (
+                                        <option key={l.Id} value={`lead:${l.Id}`}>{l.Name || l.Company}</option>
+                                    ))}
+                                </optgroup>
+                            )}
+                        </select>
+                    </div>
+
                     <div style={{ gridColumn: "span 2" }}>
                         <label style={fieldLabelStyle}>Photo</label>
 
@@ -690,6 +732,14 @@ export default function Evidence() {
                             </th>
 
                             <th style={thStyle}>
+                                Related To
+                            </th>
+
+                            <th style={thStyle}>
+                                Submitted By
+                            </th>
+
+                            <th style={thStyle}>
                                 Validation Date
                             </th>
 
@@ -751,6 +801,24 @@ export default function Evidence() {
 
                                     <td style={tdStyle}>
                                         {item.type || "-"}
+                                    </td>
+
+
+                                    {/* RELATED TO */}
+
+                                    <td style={tdStyle}>
+                                        {item.account_name
+                                            ? `Account: ${item.account_name}`
+                                            : item.lead_name
+                                                ? `Lead: ${item.lead_name}`
+                                                : <span style={{ color: "#999" }}>-</span>}
+                                    </td>
+
+
+                                    {/* SUBMITTED BY */}
+
+                                    <td style={tdStyle}>
+                                        {item.submitted_by || <span style={{ color: "#999" }}>-</span>}
                                     </td>
 
 
