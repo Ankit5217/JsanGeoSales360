@@ -894,6 +894,54 @@ export async function realignCoordinatesToTerritories() {
     return await response.json();
 }
 
+export async function analyzeTerritoryBalance() {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/territories/analyze-balance`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to analyze territory balance"
+        );
+
+    }
+
+    return await response.json();
+}
+
+export async function applyTerritoryBalance(proposal) {
+
+    const response = await authFetch(
+        `${BASE_URL}/salesforce/territories/apply-balance`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(proposal)
+        }
+    );
+
+    if (!response.ok) {
+
+        const errorData = await response.json().catch(() => ({}));
+
+        throw new Error(
+            errorData.detail ||
+            "Failed to apply territory balance"
+        );
+
+    }
+
+    return await response.json();
+}
+
 export async function createRoute(data) {
 
     const response = await authFetch(

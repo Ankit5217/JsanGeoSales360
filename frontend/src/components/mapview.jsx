@@ -18,6 +18,7 @@ import { computeExecutiveAnalytics } from "./mapview/executiveAnalytics";
 import ExecutiveAnalyticsPanel from "./mapview/ExecutiveAnalyticsPanel";
 import { useRecordsData } from "./mapview/useRecordsData";
 import { useTerritoryBoundary } from "./mapview/useTerritoryBoundary";
+import { useTerritoryBalance } from "./mapview/useTerritoryBalance";
 import { useFieldVisit } from "./mapview/useFieldVisit";
 import { useRouteGeneration } from "./mapview/useRouteGeneration";
 import { useNextBestStops } from "./mapview/useNextBestStops";
@@ -57,6 +58,16 @@ export default function MapView() {
     handleAssignTerritories,
     handleRealignCoordinates
   } = useTerritoryBoundary({ territoryList, loadTerritories, loadAccounts, loadLeads });
+
+  const {
+    balanceProposal,
+    balanceLoading,
+    balanceMessage,
+    applying,
+    handleAnalyzeBalance,
+    handleDiscardBalance,
+    handleApplyBalance
+  } = useTerritoryBalance({ loadTerritories, loadAccounts, loadLeads });
 
   const [typeFilter, setTypeFilter] = useState('');
   const [territoryFilter, setTerritoryFilter] = useState('');
@@ -485,6 +496,126 @@ export default function MapView() {
         {realignMessage && (
             <div style={{ marginTop: '8px', fontSize: '11px', color: '#0B2E4F' }}>
                 {realignMessage}
+            </div>
+        )}
+
+        <button
+            disabled={balanceLoading}
+            onClick={handleAnalyzeBalance}
+            style={{ width: '100%', marginTop: '8px', cursor: balanceLoading ? 'default' : 'pointer' }}
+            title="Compares workload (account+lead count) and revenue potential across territories that have a drawn boundary, and proposes moving border records to even things out"
+        >
+            {balanceLoading ? "Analyzing..." : "Analyze Territory Balance"}
+        </button>
+
+        {balanceMessage && !balanceProposal && (
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#0B2E4F' }}>
+                {balanceMessage}
+            </div>
+        )}
+
+        {balanceProposal && (
+            <div style={{ marginTop: '10px', fontSize: '11px', border: '1px solid #eee', borderRadius: '6px', padding: '10px' }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px' }}>
+                    Territory Balance Proposal
+                </div>
+
+                {balanceProposal.message ? (
+                    <div style={{ color: '#666' }}>{balanceProposal.message}</div>
+                ) : balanceProposal.moves.length === 0 ? (
+                    <div style={{ color: '#666' }}>
+                        All territories are within {Math.round(balanceProposal.threshold_pct * 100)}% of
+                        fair share (~{balanceProposal.fair_workload.toFixed(1)} records each) - nothing to move.
+                    </div>
+                ) : (
+                    <>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
+                            <thead>
+                                <tr style={{ textAlign: 'left', color: '#666' }}>
+                                    <th style={{ padding: '2px 4px' }}>Territory</th>
+                                    <th style={{ padding: '2px 4px' }}>Workload</th>
+                                    <th style={{ padding: '2px 4px' }}>Potential</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {balanceProposal.territories.map(t => (
+                                    <tr key={t.territory_id}>
+                                        <td style={{ padding: '2px 4px' }}>{t.territory_name || t.territory_code}</td>
+                                        <td style={{ padding: '2px 4px' }}>{t.workload_before} &rarr; {t.workload_after}</td>
+                                        <td style={{ padding: '2px 4px' }}>
+                                            {Math.round(t.potential_before / 1000)}k &rarr; {Math.round(t.potential_after / 1000)}k
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        <div style={{ color: '#666', marginBottom: '6px' }}>
+                            {balanceProposal.moves.length} record(s) proposed to move (dashed lines on the map show the redrawn boundaries):
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: '16px', maxHeight: '110px', overflowY: 'auto' }}>
+                            {balanceProposal.moves.map(m => (
+                                <li key={m.id}>{m.name} ({m.record_type}): {m.from_code} &rarr; {m.to_code}</li>
+                            ))}
+                        </ul>
+                    </>
+                )}
+
+                {balanceProposal.excluded_territories.length > 0 && (
+                    <div style={{ color: '#999', marginTop: '6px' }}>
+                        Excluded (no boundary drawn): {balanceProposal.excluded_territories.map(e => e.territory_name || e.territory_code).join(", ")}
+                    </div>
+                )}
+
+                {balanceProposal.moves && balanceProposal.moves.length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                            disabled={applying}
+                            onClick={handleApplyBalance}
+                            style={{
+                                flex: 1,
+                                padding: '7px',
+                                fontWeight: 700,
+                                border: 'none',
+                                borderRadius: '5px',
+                                background: applying ? '#9aa8b5' : '#0B2E4F',
+                                color: '#fff',
+                                cursor: applying ? 'default' : 'pointer'
+                            }}
+                        >
+                            {applying ? "Applying..." : "Apply"}
+                        </button>
+                        <button
+                            disabled={applying}
+                            onClick={handleDiscardBalance}
+                            style={{
+                                flex: 1,
+                                padding: '7px',
+                                border: '1px solid #ccc',
+                                borderRadius: '5px',
+                                background: '#fff',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Discard
+                        </button>
+                    </div>
+                )}
+
+                {!balanceProposal.moves.length && (
+                    <button
+                        onClick={handleDiscardBalance}
+                        style={{ width: '100%', marginTop: '8px', padding: '6px', border: '1px solid #ccc', borderRadius: '5px', background: '#fff', cursor: 'pointer' }}
+                    >
+                        Close
+                    </button>
+                )}
+
+                {balanceMessage && (
+                    <div style={{ marginTop: '8px', color: '#2E7D32' }}>
+                        {balanceMessage}
+                    </div>
+                )}
             </div>
         )}
     </>
@@ -932,6 +1063,33 @@ export default function MapView() {
                   </Polygon>
                 );
               })}
+            </LayerGroup>
+          )}
+
+          {balanceProposal && balanceProposal.territories.some(t => t.boundary_after) && (
+            <LayerGroup>
+              {balanceProposal.territories
+                .filter(t => t.boundary_after)
+                .map(t => {
+                  const positions = parseTerritoryBoundary({
+                    Boundary_GeoJSON__c: JSON.stringify(t.boundary_after)
+                  });
+                  if (!positions) return null;
+                  return (
+                    <Polygon
+                      key={`balance-preview-${t.territory_id}`}
+                      positions={positions}
+                      pathOptions={{
+                        color: '#D98F00',
+                        weight: 3,
+                        dashArray: '6 6',
+                        fillOpacity: 0.05
+                      }}
+                    >
+                      <Tooltip>{t.territory_name || t.territory_code} - proposed boundary</Tooltip>
+                    </Polygon>
+                  );
+                })}
             </LayerGroup>
           )}
 

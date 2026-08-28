@@ -161,6 +161,11 @@ from app.schemas.validation_evidence_schema import (
     ValidationEvidenceUpdate,
     ValidationEvidenceFulfill,
 )
+from app.schemas.territory_balance_schema import TerritoryBalanceProposal
+from app.services.territory_balance_service import (
+    compute_territory_balance,
+    apply_territory_balance,
+)
 
 router = APIRouter(
     prefix="/salesforce",
@@ -755,3 +760,14 @@ def assign_territories():
 @router.post("/territories/realign-coordinates")
 def realign_coordinates():
     return realign_coordinates_to_territories()
+
+@router.post("/territories/analyze-balance")
+def analyze_territory_balance():
+    return compute_territory_balance()
+
+@router.post(
+    "/territories/apply-balance",
+    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
+)
+def apply_territory_balance_proposal(proposal: TerritoryBalanceProposal):
+    return apply_territory_balance(proposal)
