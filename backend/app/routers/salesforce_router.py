@@ -421,13 +421,20 @@ def create_new_evidence(
     # require_role("ADMIN", "SALES_MANAGER") was added to close.
     evidence.Status__c = "Pending"
 
-    # Only credit the logged-in user as having provided the evidence when
-    # they're actually attaching a photo now. An admin/manager logging a
-    # bare request (no photo yet, for a field rep to fulfill later) hasn't
-    # provided anything themselves - Verified_By__c should stay empty
-    # until whoever calls PUT /evidence/{id}/fulfill actually does.
-    if evidence.photo_base64:
+    # Verified_By__c is always decided server-side, never trusted from the
+    # client as-submitted (same reasoning as visits' Representative__c
+    # below - a client-supplied value could misattribute someone else's
+    # evidence). Credit the logged-in user as having provided the evidence
+    # only when they're actually attaching a photo now, or this is an
+    # auto-logged checkout verification (Field_Visit__c set - see
+    # buildAutoEvidencePayload in the frontend's checkoutOutcome.js). An
+    # admin/manager logging a bare request (no photo yet, for a field rep
+    # to fulfill later) hasn't provided anything themselves - Verified_By__c
+    # stays empty until whoever calls PUT /evidence/{id}/fulfill does.
+    if evidence.photo_base64 or evidence.Field_Visit__c:
         evidence.Verified_By__c = current_user.get("sf_user_id")
+    else:
+        evidence.Verified_By__c = None
 
     return create_evidence(evidence)
 
@@ -804,7 +811,7 @@ def analyze_territory_balance():
 
 @router.post(
     "/territories/apply-balance",
-    dependencies=[Depends(require_role(*MANAGER_UP))]
+    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
 )
 def apply_territory_balance_proposal(proposal: TerritoryBalanceProposal):
     return apply_territory_balance(proposal)

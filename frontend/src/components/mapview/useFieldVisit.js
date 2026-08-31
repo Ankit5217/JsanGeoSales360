@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { updateAccount, updateLead, createFieldVisit, createOpportunity, convertLeadToAccount } from "../../services/salesforceApi";
+import { updateAccount, updateLead, createFieldVisit, createOpportunity, convertLeadToAccount, createEvidence } from "../../services/salesforceApi";
 import { VISIT_OUTCOMES } from "../modules/FieldVisits";
 import { OPPORTUNITY_STAGES } from "../../config/opportunityStages";
 import { GEOFENCE_RADIUS_METERS, getCurrentPosition, haversine } from "./mapviewUtils";
-import { getStatusForOutcome, isOpportunityOutcome } from "./checkoutOutcome";
+import { getStatusForOutcome, isOpportunityOutcome, buildAutoEvidencePayload } from "./checkoutOutcome";
 import { enqueue } from "../../offline/queue";
 
 // CloseDate is required by the Opportunity schema but not asked of the rep
@@ -129,7 +129,8 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
       visitFollowUp,
       dealName,
       dealAmount,
-      dealStage
+      dealStage,
+      checkInDistance
     };
 
     async function queueForLater() {
@@ -199,7 +200,7 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
 
       // Real Field_Visit__c record - check-in/out time, geofence-verified
       // outcome and notes captured on-site, not a hardcoded pass.
-      await createFieldVisit({
+      const visitResult = await createFieldVisit({
         Name: `${selected.name} - ${today}`,
         Account__c: selected.type === "lead" ? null : selected.id,
         Lead__c: selected.type === "lead" ? selected.id : null,
@@ -210,6 +211,23 @@ export function useFieldVisit({ combinedRecords, loadAccounts, loadLeads }) {
         Notes__c: (visitNotes.trim() + opportunityNoteSuffix).trim() || null,
         Follow_up_Date__c: visitFollowUp || null
       });
+
+      // Auto-log the GPS check-in that already gated this checkout as
+      // Validation Evidence, tied to this Account/Lead and this rep -
+      // failing to log it shouldn't fail the checkout itself, which has
+      // already gone through (Account/Lead + Field Visit are saved).
+      try {
+        await createEvidence(buildAutoEvidencePayload({
+          selectedType: selected.type,
+          selectedId: selected.id,
+          selectedName: selected.name,
+          today,
+          fieldVisitId: visitResult?.id,
+          checkInDistance
+        }));
+      } catch (evidenceError) {
+        console.error("Auto-evidence logging failed:", evidenceError);
+      }
 
       await Promise.all([loadAccounts(), loadLeads()]);
 

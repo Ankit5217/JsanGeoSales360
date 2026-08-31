@@ -1,7 +1,7 @@
 import { listPending, updateStatus, remove, subscribe } from "./queue";
 import { getToken } from "../config/apiBase";
 import { updateLead, updateAccount, createFieldVisit, createEvidence, createOpportunity, convertLeadToAccount } from "../services/salesforceApi";
-import { getStatusForOutcome, isOpportunityOutcome } from "../components/mapview/checkoutOutcome";
+import { getStatusForOutcome, isOpportunityOutcome, buildAutoEvidencePayload } from "../components/mapview/checkoutOutcome";
 
 function defaultCloseDate() {
   const d = new Date();
@@ -22,7 +22,8 @@ async function syncCheckout(payload) {
     visitFollowUp,
     dealName,
     dealAmount,
-    dealStage
+    dealStage,
+    checkInDistance
   } = payload;
 
   let result;
@@ -72,7 +73,7 @@ async function syncCheckout(payload) {
     opportunityNoteSuffix = `\n[Opportunity created: ${opportunityName}]`;
   }
 
-  await createFieldVisit({
+  const visitResult = await createFieldVisit({
     Name: `${selectedName} - ${today}`,
     Account__c: selectedType === "lead" ? null : selectedId,
     Lead__c: selectedType === "lead" ? selectedId : null,
@@ -83,6 +84,23 @@ async function syncCheckout(payload) {
     Notes__c: ((visitNotes ? visitNotes.trim() : "") + opportunityNoteSuffix).trim() || null,
     Follow_up_Date__c: visitFollowUp || null
   });
+
+  // Same auto-evidence logging as the live checkout path in
+  // useFieldVisit.js - a failure here shouldn't fail the whole queued
+  // item and re-block Account/Lead + Field Visit sync, which already
+  // succeeded above.
+  try {
+    await createEvidence(buildAutoEvidencePayload({
+      selectedType,
+      selectedId,
+      selectedName,
+      today,
+      fieldVisitId: visitResult?.id,
+      checkInDistance
+    }));
+  } catch (evidenceError) {
+    console.error("Auto-evidence logging failed during queued checkout sync:", evidenceError);
+  }
 }
 
 async function syncEvidence(payload) {
