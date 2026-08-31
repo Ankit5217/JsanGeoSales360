@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JSAN GeoSales 360 — System &amp; Workflow Visualization</title>
+<title>JSAN GeoSales 360 — Project Blueprint &amp; Workflow Visualization</title>
 <style>
   :root {
     --bg: #0b1120;
@@ -28,62 +28,37 @@
     color: var(--text);
     line-height: 1.55;
   }
-  header {
-    padding: 48px 24px 32px;
-    text-align: center;
-    background: radial-gradient(ellipse at top, rgba(79,142,247,.18), transparent 60%);
-  }
-  header h1 {
-    font-size: 2rem;
+  header { padding: 48px 24px 32px; text-align: center;
+    background: radial-gradient(ellipse at top, rgba(79,142,247,.18), transparent 60%); }
+  header h1 { font-size: 2rem;
     background: linear-gradient(90deg, var(--blue), var(--teal));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  header p { color: var(--muted); max-width: 760px; margin: 12px auto 0; }
-  nav {
-    position: sticky; top: 0; z-index: 50;
-    display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { color: var(--muted); max-width: 800px; margin: 12px auto 0; }
+  nav { position: sticky; top: 0; z-index: 50; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;
     background: rgba(11,17,32,.92); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line); padding: 10px;
-  }
-  nav a {
-    color: var(--muted); text-decoration: none; font-size: .85rem;
-    padding: 6px 14px; border-radius: 999px; border: 1px solid transparent;
-  }
+    border-bottom: 1px solid var(--line); padding: 10px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: .82rem;
+    padding: 6px 13px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
   nav a:hover { color: var(--text); border-color: var(--line); background: var(--card); }
   main { max-width: 1180px; margin: 0 auto; padding: 40px 20px 80px; }
-  section { margin-bottom: 72px; scroll-margin-top: 70px; }
-  h2 {
-    font-size: 1.35rem; margin-bottom: 6px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  h2 .num {
-    font-size: .75rem; color: var(--teal); border: 1px solid var(--teal);
-    border-radius: 6px; padding: 2px 8px; letter-spacing: 1px;
-  }
+  section { margin-bottom: 76px; scroll-margin-top: 70px; }
+  h2 { font-size: 1.35rem; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  h2 .num { font-size: .75rem; color: var(--teal); border: 1px solid var(--teal);
+    border-radius: 6px; padding: 2px 8px; letter-spacing: 1px; }
   .sub { color: var(--muted); font-size: .95rem; margin-bottom: 26px; }
 
-  /* ---------- badges ---------- */
-  .pill {
-    display: inline-block; font-size: .68rem; font-weight: 700;
-    letter-spacing: .8px; padding: 2px 10px; border-radius: 999px;
-    text-transform: uppercase;
-  }
-  .done  { background: rgba(52,211,153,.15); color: var(--green);  border: 1px solid rgba(52,211,153,.4); }
-  .now   { background: rgba(251,191,36,.15); color: var(--amber);  border: 1px solid rgba(251,191,36,.45); }
-  .next  { background: rgba(167,139,250,.15);color: var(--purple); border: 1px solid rgba(167,139,250,.4); }
+  .pill { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .8px;
+    padding: 2px 10px; border-radius: 999px; text-transform: uppercase; }
+  .done { background: rgba(52,211,153,.15); color: var(--green); border: 1px solid rgba(52,211,153,.4); }
+  .now  { background: rgba(251,191,36,.15); color: var(--amber); border: 1px solid rgba(251,191,36,.45); }
+  .next { background: rgba(167,139,250,.15); color: var(--purple); border: 1px solid rgba(167,139,250,.4); }
 
-  /* ---------- generic node card ---------- */
-  .node {
-    background: var(--card); border: 1px solid var(--line);
-    border-radius: 14px; padding: 14px 16px; position: relative;
-  }
+  .node { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 16px; position: relative; }
   .node h3 { font-size: .95rem; margin-bottom: 4px; }
   .node ul { list-style: none; margin-top: 8px; }
-  .node li {
-    font-size: .78rem; color: var(--muted); padding-left: 14px; position: relative; margin: 3px 0;
-  }
+  .node li { font-size: .78rem; color: var(--muted); padding-left: 14px;
+    position: relative; margin: 3px 0; }
   .node li::before { content: ""; position: absolute; left: 0; top: .55em;
     width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
   .accent-blue   { border-top: 3px solid var(--blue); }
@@ -92,97 +67,78 @@
   .accent-amber  { border-top: 3px solid var(--amber); }
   .accent-purple { border-top: 3px solid var(--purple); }
   .accent-pink   { border-top: 3px solid var(--pink); }
-  .accent-red    { border-top: 3px solid var(--red); }
 
-  /* ---------- layered architecture ---------- */
-  .arch-layer {
-    border: 1px dashed var(--line); border-radius: 16px;
-    padding: 18px 18px 20px; margin-bottom: 22px; position: relative;
-    background: rgba(255,255,255,.02);
-  }
-  .arch-layer > .layer-label {
-    position: absolute; top: -11px; left: 18px;
-    background: var(--bg); padding: 0 10px;
-    font-size: .72rem; font-weight: 700; letter-spacing: 1.2px;
-    text-transform: uppercase; color: var(--teal);
-  }
-  .arch-grid {
-    display: grid; gap: 12px; margin-top: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  }
-  .flow-down {
-    text-align: center; color: var(--blue); font-size: 1.2rem; margin: -8px 0 14px;
-  }
+  /* ---------- built-so-far timeline ---------- */
+  .tl { position: relative; margin-left: 17px; }
+  .tl::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 3px; background: linear-gradient(180deg, var(--green) 0%, var(--teal) 55%, var(--amber) 100%); border-radius: 2px; }
+  .tl-item { position: relative; padding: 0 0 26px 30px; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-dot { position: absolute; left: -9.5px; top: 4px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--card); border: 4px solid var(--green); }
+  .tl-item.wip .tl-dot { border-color: var(--amber); box-shadow: 0 0 0 5px rgba(251,191,36,.18); }
+  .tl-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .tl-head h3 { font-size: 1rem; }
+  .tl-body { color: var(--muted); font-size: .85rem; margin-top: 4px; max-width: 900px; }
+  .tl-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag { font-size: .72rem; color: var(--text); background: var(--card2);
+    border: 1px solid var(--line); padding: 2px 10px; border-radius: 999px; }
+
+  /* ---------- architecture layers ---------- */
+  .arch-layer { border: 1px dashed var(--line); border-radius: 16px;
+    padding: 20px 18px 20px; margin-bottom: 22px; position: relative; background: rgba(255,255,255,.02); }
+  .arch-layer > .layer-label { position: absolute; top: -11px; left: 18px; background: var(--bg);
+    padding: 0 10px; font-size: .72rem; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--teal); }
+  .arch-grid { display: grid; gap: 12px; margin-top: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .flow-down { text-align: center; color: var(--blue); font-size: 1.2rem; margin: -8px 0 14px; }
   .ext-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
 
   /* ---------- pipeline ---------- */
-  .pipe { display: flex; flex-direction: column; gap: 0; }
-  .pipe-row { display: grid; grid-template-columns: 46px 1fr; gap: 0; align-items: stretch; }
-  .stage-rail {
-    display: flex; flex-direction: column; align-items: center;
-  }
-  .stage-dot {
-    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  .pipe-row { display: grid; grid-template-columns: 46px 1fr; align-items: stretch; }
+  .stage-rail { display: flex; flex-direction: column; align-items: center; }
+  .stage-dot { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: .78rem; font-weight: 700; color: #08101f;
-  }
+    font-size: .78rem; font-weight: 700; color: #08101f; }
   .stage-line { width: 3px; flex: 1; background: var(--line); min-height: 26px; }
-  .stage-card {
-    margin: 0 0 22px 14px; padding: 16px 18px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  }
+  .stage-card { margin: 0 0 22px 14px; padding: 16px 18px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
   .stage-card h3 { font-size: 1rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .stage-card .who {
-    font-size: .7rem; font-weight: 700; color: var(--bg);
-    padding: 2px 9px; border-radius: 999px; letter-spacing: .5px;
-  }
+  .who { font-size: .7rem; font-weight: 700; color: var(--bg);
+    padding: 2px 9px; border-radius: 999px; letter-spacing: .5px; }
   .stage-card p { color: var(--muted); font-size: .85rem; margin-top: 6px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .chip {
-    font-size: .72rem; color: var(--text);
-    background: var(--card2); border: 1px solid var(--line);
-    padding: 3px 10px; border-radius: 999px;
-  }
+  .chip { font-size: .72rem; color: var(--text); background: var(--card2);
+    border: 1px solid var(--line); padding: 3px 10px; border-radius: 999px; }
 
-  /* ---------- swimlanes ---------- */
+  /* ---------- roles ---------- */
   .swim { overflow-x: auto; }
   .swim table { width: 100%; border-collapse: collapse; min-width: 720px; }
-  .swim th, .swim td {
-    border: 1px solid var(--line); padding: 9px 12px; font-size: .82rem; text-align: left;
-  }
-  .swim th { background: var(--card2); color: var(--text); }
+  .swim th, .swim td { border: 1px solid var(--line); padding: 9px 12px; font-size: .82rem; text-align: left; }
+  .swim th { background: var(--card2); }
   .swim td.role-name { font-weight: 600; white-space: nowrap; }
   .yes { color: var(--green); font-weight: 700; }
   .no  { color: var(--red); }
 
-  /* ---------- map layers ---------- */
-  .mapwrap {
-    border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
-    display: grid; grid-template-columns: 300px 1fr; min-height: 340px;
-  }
+  /* ---------- GIS hub canvas ---------- */
+  .mapwrap { border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    display: grid; grid-template-columns: 300px 1fr; min-height: 340px; }
   @media (max-width: 800px) { .mapwrap { grid-template-columns: 1fr; } }
   .map-side { background: var(--card); padding: 18px; border-right: 1px solid var(--line); }
   .map-side h3 { font-size: .9rem; margin-bottom: 12px; }
-  .layer-item { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; font-size: .82rem; color: var(--muted); }
+  .layer-item { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0;
+    font-size: .82rem; color: var(--muted); }
   .layer-swatch { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
-  .map-canvas {
-    position: relative; background:
+  .map-canvas { position: relative; background:
       repeating-linear-gradient(0deg, transparent 0 39px, rgba(79,142,247,.07) 39px 40px),
-      repeating-linear-gradient(90deg, transparent 0 39px, rgba(79,142,247,.07) 39px 40px),
-      #0d1526;
-  }
-  .territory-poly {
-    position: absolute; inset: 12% 8% 18% 14%;
+      repeating-linear-gradient(90deg, transparent 0 39px, rgba(79,142,247,.07) 39px 40px), #0d1526; }
+  .territory-poly { position: absolute; inset: 12% 8% 18% 14%;
     background: rgba(45,212,191,.10); border: 2px dashed rgba(45,212,191,.65);
-    clip-path: polygon(8% 38%, 34% 10%, 74% 18%, 96% 52%, 70% 88%, 28% 82%);
-  }
-  .route-line {
-    position: absolute; left: 18%; top: 30%; width: 58%; height: 42%;
-    border: 3px solid transparent;
-    border-color: var(--pink) var(--pink) transparent transparent;
-    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%;
-    transform: rotate(-8deg);
-  }
+    clip-path: polygon(8% 38%, 34% 10%, 74% 18%, 96% 52%, 70% 88%, 28% 82%); }
+  .route-line { position: absolute; left: 18%; top: 30%; width: 58%; height: 42%;
+    border: 3px solid transparent; border-color: var(--pink) var(--pink) transparent transparent;
+    border-radius: 60% 40% 55% 45% / 50% 60% 40% 50%; transform: rotate(-8deg); }
   .pin { position: absolute; width: 14px; height: 14px; border-radius: 50%;
     border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
   .pin-label { position: absolute; font-size: .62rem; color: var(--muted);
@@ -192,43 +148,249 @@
   .geofence { position: absolute; width: 64px; height: 64px; border-radius: 50%;
     border: 2px dashed rgba(52,211,153,.8); background: rgba(52,211,153,.08); }
 
+  /* ---------- realtime ---------- */
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 12px; }
+
+  /* ---------- browser mockups (app today) ---------- */
+  .browser { border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    background: #0e1729; box-shadow: 0 12px 34px rgba(0,0,0,.45); }
+  .browser-bar { display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    background: #131f38; border-bottom: 1px solid var(--line); }
+  .b-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .url-pill { flex: 1; margin-left: 10px; font-size: .72rem; color: var(--muted);
+    background: #0d1526; border: 1px solid var(--line); border-radius: 999px; padding: 3px 14px; }
+  .screen { display: grid; grid-template-columns: 190px 1fr; min-height: 330px; }
+  @media (max-width: 720px) { .screen { grid-template-columns: 1fr; } .side { display: none; } }
+  .side { background: linear-gradient(180deg,#101c33,#0c1425); border-right: 1px solid var(--line);
+    padding: 14px 10px; font-size: .74rem; }
+  .side .brand { font-weight: 800; letter-spacing: -.01em; margin-bottom: 2px; font-size: .8rem; }
+  .side .brand-sub { font-size: .58rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--teal); margin-bottom: 14px; }
+  .side a { display: block; color: var(--muted); text-decoration: none; padding: 6px 10px;
+    border-radius: 7px; border-left: 3px solid transparent; }
+  .side a.on { background: rgba(255,255,255,.12); color: #fff; border-left-color: var(--teal); font-weight: 600; }
+  .content { padding: 16px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(86px,1fr)); gap: 8px; margin-bottom: 14px; }
+  .kpi { background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .kpi b { font-size: 1.05rem; display: block; }
+  .kpi span { font-size: .62rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .bars { display: flex; align-items: flex-end; gap: 10px; height: 110px;
+    background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .bar { flex: 1; border-radius: 4px 4px 0 0; }
+  .feed { margin-top: 12px; font-size: .7rem; color: var(--muted); background: var(--card2);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .feed div { margin: 3px 0; }
+  .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green); margin-right: 6px; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .caption { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 10px; }
+  .mock-grid { display: grid; gap: 22px; grid-template-columns: 1fr; }
+
+  /* ---------- phone mockups (future) ---------- */
+  .future-grid { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .phone { border: 1px solid var(--line); border-radius: 26px; overflow: hidden;
+    background: #0e1729; box-shadow: 0 12px 34px rgba(0,0,0,.45); max-width: 300px; margin: 0 auto; width: 100%; }
+  .phone-bar { padding: 8px 14px 4px; font-size: .62rem; color: var(--muted);
+    display: flex; justify-content: space-between; background: #131f38; }
+  .phone-body { padding: 12px; font-size: .74rem; min-height: 380px; }
+  .p-title { font-weight: 700; font-size: .82rem; margin-bottom: 8px; }
+  .offline-banner { font-size: .64rem; background: rgba(251,191,36,.12); color: var(--amber);
+    border: 1px solid rgba(251,191,36,.35); border-radius: 8px; padding: 4px 8px; margin-bottom: 10px; }
+  .stop-card { background: var(--card2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 9px; display: flex; gap: 10px; align-items: center; }
+  .stop-num { width: 26px; height: 26px; min-width: 26px; border-radius: 50%;
+    background: var(--pink); color: #08101f; font-weight: 800; font-size: .72rem;
+    display: flex; align-items: center; justify-content: center; }
+  .stop-card.done-stop .stop-num { background: var(--green); }
+  .stop-meta { flex: 1; }
+  .stop-meta b { display: block; font-size: .76rem; }
+  .stop-meta span { color: var(--muted); font-size: .66rem; }
+  .btn { display: block; text-align: center; padding: 8px; border-radius: 9px;
+    font-size: .74rem; font-weight: 700; margin-top: 10px; }
+  .btn-go { background: var(--green); color: #08101f; }
+  .btn-wait { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  .btn-teal { background: var(--teal); color: #08101f; }
+  .score-card { background: var(--card2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 9px; }
+  .score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .score-badge { font-weight: 800; font-size: .78rem; color: var(--purple); }
+  .reason { color: var(--muted); font-size: .66rem; }
+  .track-map { position: relative; height: 150px; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--line); background:
+      repeating-linear-gradient(0deg, transparent 0 23px, rgba(79,142,247,.08) 23px 24px),
+      repeating-linear-gradient(90deg, transparent 0 23px, rgba(79,142,247,.08) 23px 24px), #0d1526; }
+  .eta-badge { position: absolute; font-size: .6rem; background: rgba(11,17,32,.9);
+    border: 1px solid var(--line); color: var(--muted); padding: 1px 6px; border-radius: 999px; }
+  .balance-row { display: grid; grid-template-columns: 1fr 44px 44px; gap: 6px; align-items: center;
+    background: var(--card2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 7px 10px; margin-bottom: 8px; font-size: .68rem; }
+  .meter { height: 7px; border-radius: 4px; background: #0d1526; overflow: hidden; margin-top: 3px; }
+  .meter i { display: block; height: 100%; border-radius: 4px; }
+  .bal-col { text-align: right; font-size: .66rem; color: var(--muted); }
+  .future-label { text-align: center; margin-top: 10px; }
+  .future-label h4 { font-size: .92rem; }
+  .future-label p { color: var(--muted); font-size: .76rem; }
+
   /* ---------- roadmap ---------- */
-  .road { display: grid; gap: 12px; }
-  .road-row {
-    display: grid; grid-template-columns: 130px 1fr; gap: 14px; align-items: start;
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px;
-  }
+  .road-row { display: grid; grid-template-columns: 130px 1fr; gap: 14px; align-items: start;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px 18px; margin-bottom: 12px; }
   .road-phase { font-weight: 700; font-size: .9rem; }
   .road-phase small { display: block; color: var(--muted); font-weight: 400; font-size: .72rem; }
   .road-body { font-size: .85rem; color: var(--muted); }
   .road-body b { color: var(--text); }
 
-  footer { text-align: center; color: var(--muted); font-size: .78rem; padding: 30px; border-top: 1px solid var(--line); }
+  footer { text-align: center; color: var(--muted); font-size: .78rem;
+    padding: 30px; border-top: 1px solid var(--line); }
+
+  .pdf-btn { position: fixed; bottom: 22px; right: 22px; z-index: 100;
+    display: flex; align-items: center; gap: 8px; padding: 11px 18px;
+    border-radius: 999px; border: none; cursor: pointer; font-weight: 700; font-size: .82rem;
+    color: #08101f; background: linear-gradient(90deg, var(--blue), var(--teal));
+    box-shadow: 0 10px 26px rgba(0,0,0,.4); }
+  .pdf-btn:hover { filter: brightness(1.08); }
+
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    nav, .pdf-btn { display: none !important; }
+    body { background: var(--bg) !important; }
+    section { margin-bottom: 34px; page-break-inside: avoid; }
+    .tl-item, .stage-card, .road-row, .arch-layer { page-break-inside: avoid; }
+    main { padding: 20px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>JSAN GeoSales 360</h1>
-  <p>Geospatial Sales Intelligence platform on top of Salesforce CRM — discovery, territories,
-     optimized routing, GPS-verified field visits and executive analytics, all visualized on one GIS map.</p>
+  <h1>JSAN GeoSales 360 — Project Blueprint</h1>
+  <p>What we have built so far, how the system works end-to-end today — including mobile, live
+     ops, territory intelligence and server-side authorization — and the one item still open.</p>
 </header>
 
 <nav>
+  <a href="#built">Built So Far</a>
   <a href="#architecture">Architecture</a>
   <a href="#pipeline">Field Workflow</a>
+  <a href="#screens">App Today</a>
   <a href="#roles">Roles</a>
-  <a href="#map">GIS Map Hub</a>
+  <a href="#map">GIS Hub</a>
   <a href="#realtime">Realtime</a>
+  <a href="#future">Future Experience</a>
   <a href="#roadmap">Roadmap</a>
 </nav>
 
+
+<button class="pdf-btn" onclick="window.print()">&#128190;&nbsp; Save as PDF</button>
+
 <main>
 
-<!-- ================= 1. ARCHITECTURE ================= -->
+<!-- ================= BUILT SO FAR ================= -->
+<section id="built">
+  <h2><span class="num">00</span> Built So Far — the journey in one line</h2>
+  <p class="sub">Every phase below is merged to master and pushed. Current position: Phase 13.</p>
+
+  <div class="tl">
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 1 — Security first</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">JWT login, protected API routes, role-permission matrix for 5 roles.
+        Nothing else was touched until the platform was locked down.</div>
+      <div class="tl-tags"><span class="tag">auth_router</span><span class="tag">JWT</span><span class="tag">rolePermissions.js</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phases 2–3 — Prospecting engine</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Full Discovery Candidate workflow: capture prospects before they touch the CRM,
+        GIS coordinate validation with Hyderabad auto-correction, and fuzzy duplicate detection against existing Accounts/Leads.</div>
+      <div class="tl-tags"><span class="tag">Discovery module</span><span class="tag">duplicate_detection.py</span><span class="tag">convert-to-lead</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 4 — Opportunities module</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Complete deal tracking: real list + form, stage picklist, GIS Map pins for every opportunity.</div>
+      <div class="tl-tags"><span class="tag">Opportunities.jsx</span><span class="tag">opportunity_schema.py</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 5 — Field visits go real</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Browser-GPS geofence check-in/out replaces honor-system logging; visits reopen automatically
+        when validation isn't "Validated"; list bugs fixed.</div>
+      <div class="tl-tags"><span class="tag">FieldVisits.jsx</span><span class="tag">geofence check-in</span><span class="tag">WebSocket broadcast</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 6 — Real routing</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Simulated route math replaced by OpenRouteService optimization: true driving order,
+        distance and time per day plan.</div>
+      <div class="tl-tags"><span class="tag">routing_service.py</span><span class="tag">OpenRouteService API</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 7 — Spatial territories</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Managers draw territory boundaries on the map; point-in-polygon assignment
+        automatically places every Account/Lead/Candidate into the right territory. Deletion persistence bug fixed.</div>
+      <div class="tl-tags"><span class="tag">territory_assignment_service.py</span><span class="tag">leaflet-draw</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 8 — One pane of glass</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Dashboard reworked to aggregate all nine modules; fake AI notifications and activity feed replaced
+        with real backend events; Salesforce demo accounts hidden; edit capability added across modules.</div>
+      <div class="tl-tags"><span class="tag">Dashboard.jsx</span><span class="tag">ExecutiveAnalyticsPanel</span><span class="tag">real activity feed</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 9 — Code health refactor</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">The monolithic 66KB mapview.jsx split into focused modules under components/mapview/ —
+        hooks for records, field visits, territory boundaries, route generation, live feed and next-best-stops,
+        plus shared utils and export logic. Zoom-control placement fixed; coordinates aligned to their real territories.</div>
+      <div class="tl-tags"><span class="tag">useFieldVisit.js</span><span class="tag">useRecordsData.js</span><span class="tag">useTerritoryBoundary.js</span><span class="tag">mapviewUtils.js</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 10 — Mobile, intelligence &amp; live ops</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Three capabilities landed together: an installable PWA with offline check-out/evidence
+        queueing and background sync for low-connectivity field reps; Smart Suggestions ranking nearby accounts by
+        overdue visits, deal value and priority; and Live Operations — authenticated rep position streaming over
+        WebSocket with a manager fleet view and stop nudges.</div>
+      <div class="tl-tags"><span class="tag">offline/syncEngine.js</span><span class="tag">useNextBestStops.js</span><span class="tag">LiveOps.jsx</span><span class="tag">service worker</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 11 — Territory auto-balancing &amp; scheduled reports</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Workload-vs-potential analysis with a preview-then-apply flow for territory boundary
+        edits (convex-hull redraw, distance-advantage record transfer). Separately, the Executive Report PDF —
+        previously a manual browser download — now sends itself by Gmail every morning via a Node/Python handoff
+        that reuses the exact same jsPDF report code, no duplicated logic.</div>
+      <div class="tl-tags"><span class="tag">territory_balance_service.py</span><span class="tag">report_scheduler_service.py</span><span class="tag">APScheduler</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 12 — Server-side authorization lockdown</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">A full-app audit found the backend authenticated every request but rarely checked
+        role — a Field Rep token could call manager/admin-only endpoints directly. ~25 endpoints across Accounts,
+        Leads, Opportunities, Discovery, Territories, Routes, Visits and Evidence now enforce the same permission
+        model the UI already implies, with dual-purpose endpoints (used by both an admin form and the field
+        checkout flow) carefully mapped first so field reps' live checkout kept working.</div>
+      <div class="tl-tags"><span class="tag">require_role()</span><span class="tag">57 boundary checks verified</span></div>
+    </div>
+
+    <div class="tl-item"><div class="tl-dot"></div>
+      <div class="tl-head"><h3>Phase 13 — Evidence auto-attribution</h3><span class="pill done">Done</span></div>
+      <div class="tl-body">Validation Evidence no longer requires a separate manual entry: since the "Check out"
+        button only appears after a live GPS geofence check has already passed, checkout itself now auto-logs a
+        GPS Verification evidence record tied to that Account/Lead and stamped with the checking-out rep — still
+        routed through manager review before approval, never self-approved.</div>
+      <div class="tl-tags"><span class="tag">buildAutoEvidencePayload()</span><span class="tag">checkoutOutcome.js</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
 <section id="architecture">
   <h2><span class="num">01</span> System Architecture — how data moves</h2>
-  <p class="sub">Three tiers: a React SPA, a FastAPI gateway that owns all business logic, and external systems (Salesforce + OpenRouteService). The browser never talks to Salesforce directly.</p>
+  <p class="sub">Three tiers: a React SPA, a FastAPI gateway that owns all business logic, and external systems.
+     The browser never talks to Salesforce directly.</p>
 
   <div class="arch-layer">
     <span class="layer-label">Frontend · React 19 + Vite (port 5173)</span>
@@ -285,98 +447,210 @@
         <ul><li>Real driving distances &amp; times</li><li>Multi-stop route optimization</li></ul>
       </div>
       <div class="node accent-amber"><h3>Device GPS</h3>
-        <ul><li>Browser geolocation on check-in / out</li><li>Geofence radius validation</li></ul>
+        <ul><li>Geolocation on check-in / out</li><li>Geofence radius validation</li></ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ================= 2. PIPELINE ================= -->
+<!-- ================= PIPELINE ================= -->
 <section id="pipeline">
   <h2><span class="num">02</span> End-to-End Field Workflow — the core business loop</h2>
-  <p class="sub">Every record flows through this pipeline: unknown market &rarr; discovered candidate &rarr; qualified lead &rarr; opportunity &rarr; visited, evidenced, closed.</p>
+  <p class="sub">Every record flows through this pipeline: unknown market &rarr; discovered candidate &rarr;
+     qualified lead &rarr; opportunity &rarr; visited, evidenced, closed. All nine stages are live today.</p>
 
-  <div class="pipe">
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--purple)">1</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Discover prospects <span class="who" style="background:var(--purple)">GIS Analyst / Manager</span> <span class="pill done">Live</span></h3>
+      <p>Candidates enter from external sources or manual capture. Coordinates validated against Hyderabad bounds, auto-corrected if missing.</p>
+      <div class="chips"><span class="chip">Discovery module</span><span class="chip">POST /discovery-candidates</span><span class="chip">GIS validation status</span></div>
+    </div>
+  </div>
 
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--purple)">1</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Discover prospects <span class="who" style="background:var(--purple)">GIS Analyst / Manager</span> <span class="pill done">Live</span></h3>
-        <p>Candidates enter from external sources (web research, partner lists) or manual capture. Coordinates are validated against Hyderabad bounds and auto-corrected if missing.</p>
-        <div class="chips"><span class="chip">Discovery module</span><span class="chip">POST /discovery-candidates</span><span class="chip">GIS validation status</span></div>
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--purple)">2</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Duplicate screening <span class="who" style="background:var(--purple)">System</span> <span class="pill done">Live</span></h3>
+      <p>Fuzzy name/address matching flags duplicates against existing Leads and Accounts before anything pollutes the CRM.</p>
+      <div class="chips"><span class="chip">duplicate_detection.py</span><span class="chip">POST .../check-duplicates</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">3</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Convert candidate &rarr; Lead <span class="who" style="background:var(--blue)">Manager / Analyst</span> <span class="pill done">Live</span></h3>
+      <p>One click creates the Lead in Salesforce carrying validated coordinates, review notes and source metadata.</p>
+      <div class="chips"><span class="chip">POST .../convert-to-lead</span><span class="chip">Leads module</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">4</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Auto territory assignment <span class="who" style="background:var(--blue)">System</span> <span class="pill done">Live</span></h3>
+      <p>Managers draw boundaries on the GIS map; every new record is assigned by point-in-polygon test — no manual tagging.</p>
+      <div class="chips"><span class="chip">Territories module</span><span class="chip">leaflet-draw polygons</span><span class="chip">territory_assignment_service</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--teal)">5</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Qualify &rarr; Opportunity <span class="who" style="background:var(--teal)">Sales Exec / Rep</span> <span class="pill done">Live</span></h3>
+      <p>Contact and qualification happen on the ground; converted Leads become Opportunities tracked through ten stages toward close.</p>
+      <div class="chips"><span class="chip">Leads &rarr; Opportunities modules</span><span class="chip">Full edit capability</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--pink)">6</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Plan &amp; optimize the day's route <span class="who" style="background:var(--pink)">Field Rep</span> <span class="pill done">Live</span></h3>
+      <p>Pick stops inside your territory; OpenRouteService computes real driving order, distance and time. Manager approves or rejects.</p>
+      <div class="chips"><span class="chip">Routes module</span><span class="chip">GET /routes/today</span><span class="chip">Pending / Approved / Rejected</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--green)">7</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>GPS geofence check-in / check-out <span class="who" style="background:var(--green)">Field Rep</span> <span class="pill done">Live</span></h3>
+      <p>Check-in accepted only within the customer geofence via device GPS; check-out records duration; visit reopens if not validated.</p>
+      <div class="chips"><span class="chip">FieldVisits module</span><span class="chip">POST /visits</span><span class="chip">WS broadcast &rarr; live dashboard</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--amber)">8</div><div class="stage-line"></div></div>
+    <div class="stage-card">
+      <h3>Capture evidence <span class="who" style="background:var(--amber)">Field Rep</span> <span class="pill done">Live</span></h3>
+      <p>Photos, notes and documents attach to the visit and its Account/Lead with a validation status trail — proof of every meeting.</p>
+      <div class="chips"><span class="chip">Evidence module</span><span class="chip">/evidence/visit/{id}</span></div>
+    </div>
+  </div>
+
+  <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">9</div><div class="stage-line" style="background:transparent"></div></div>
+    <div class="stage-card" style="margin-bottom:0">
+      <h3>Measure &amp; act <span class="who" style="background:var(--blue)">Leadership</span> <span class="pill done">Live</span></h3>
+      <p>Dashboard aggregates all nine modules — pipeline by status/source/month, visit outcomes, overdue accounts, route distance/time,
+         territory activity — plus Executive Analytics. Notifications come from real backend events.</p>
+      <div class="chips"><span class="chip">/dashboard/* (20+ aggregates)</span><span class="chip">Recharts + PDF export</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= APP TODAY (SCREEN MOCKUPS) ================= -->
+<section id="screens">
+  <h2><span class="num">03</span> The App Today — screen walkthrough</h2>
+  <p class="sub">Wireframe mockups of what is actually shipped, matching the real UI structure.</p>
+
+  <div class="mock-grid">
+
+    <!-- LOGIN -->
+    <div>
+      <div class="browser">
+        <div class="browser-bar">
+          <span class="b-dot" style="background:#f87171"></span><span class="b-dot" style="background:#fbbf24"></span><span class="b-dot" style="background:#34d399"></span>
+          <span class="url-pill">localhost:5173 — JSAN GeoSales 360</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;min-height:230px;background:radial-gradient(ellipse at center,rgba(79,142,247,.12),transparent 65%),#0e1729">
+          <div style="width:270px;text-align:center">
+            <div style="font-weight:800;font-size:1rem;margin-bottom:2px">GeoSales 360</div>
+            <div style="font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);margin-bottom:16px">Field Sales Intelligence</div>
+            <div style="height:30px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;display:flex;align-items:center;padding:0 10px;color:var(--muted);font-size:.68rem">Username</div>
+            <div style="height:30px;border:1px solid var(--line);border-radius:8px;margin-bottom:14px;display:flex;align-items:center;padding:0 10px;color:var(--muted);font-size:.68rem">Password</div>
+            <div style="height:32px;border-radius:8px;background:linear-gradient(90deg,var(--blue),var(--teal));color:#08101f;font-weight:800;font-size:.74rem;display:flex;align-items:center;justify-content:center">Sign In</div>
+            <div style="margin-top:12px;font-size:.62rem;color:var(--muted)">JWT issued &rarr; stored session &rarr; role resolved</div>
+          </div>
+        </div>
       </div>
+      <p class="caption">Login — JWT auth against auth_router; invalid users never reach any data endpoint.</p>
     </div>
 
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--purple)">2</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Duplicate screening <span class="who" style="background:var(--purple)">System</span> <span class="pill done">Live</span></h3>
-        <p>Fuzzy name/address matching against existing Leads and Accounts flags duplicates before anything pollutes the CRM.</p>
-        <div class="chips"><span class="chip">duplicate_detection.py</span><span class="chip">POST .../check-duplicates</span></div>
+    <!-- SHELL + DASHBOARD -->
+    <div>
+      <div class="browser">
+        <div class="browser-bar">
+          <span class="b-dot" style="background:#f87171"></span><span class="b-dot" style="background:#fbbf24"></span><span class="b-dot" style="background:#34d399"></span>
+          <span class="url-pill">GeoSales 360 — Dashboard (Sales Manager)</span>
+        </div>
+        <div class="screen">
+          <div class="side">
+            <div class="brand">GeoSales 360</div>
+            <div class="brand-sub">Field Sales Intelligence</div>
+            <a>Dashboard</a><a>Accounts</a><a>Leads</a><a>Opportunities</a><a>Discovery</a>
+            <a class="on">Dashboard</a><a>Territories</a><a>Routes</a><a>Field Visits</a>
+            <a>Evidence</a><a>GIS Map</a>
+            <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px;color:var(--muted)">
+              A · Ankit<br><span style="font-size:.6rem">Sales Manager</span>
+            </div>
+          </div>
+          <div class="content">
+            <div class="kpi-row">
+              <div class="kpi"><b>128</b><span>Accounts</span></div>
+              <div class="kpi"><b>46</b><span>Leads</span></div>
+              <div class="kpi"><b>31</b><span>Opps</span></div>
+              <div class="kpi"><b>6</b><span>Territories</span></div>
+              <div class="kpi"><b>14</b><span>Visits today</span></div>
+              <div class="kpi"><b>89%</b><span>Validated</span></div>
+            </div>
+            <div class="bars">
+              <div class="bar" style="height:35%;background:var(--red)"></div>
+              <div class="bar" style="height:80%;background:var(--amber)"></div>
+              <div class="bar" style="height:55%;background:var(--green)"></div>
+              <div class="bar" style="height:95%;background:var(--blue)"></div>
+              <div class="bar" style="height:48%;background:var(--purple)"></div>
+              <div class="bar" style="height:66%;background:var(--pink)"></div>
+              <div class="bar" style="height:28%;background:var(--teal)"></div>
+            </div>
+            <div class="feed">
+              <span class="live-dot"></span><b style="color:var(--text)">Activity feed (real events)</b>
+              <div>&#8226; Ravi checked in at Sri Lakshmi Traders &middot; 10:42</div>
+              <div>&#8226; New lead converted from Discovery &middot; 10:15</div>
+              <div>&#8226; Route #214 approved by Manager &middot; 09:58</div>
+            </div>
+          </div>
+        </div>
       </div>
+      <p class="caption">Main shell — sidebar filtered by role permissions; Dashboard aggregates all nine modules with Recharts charts and a WebSocket-driven activity feed.</p>
     </div>
 
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">3</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Convert candidate &rarr; Lead <span class="who" style="background:var(--blue)">Manager / Analyst</span> <span class="pill done">Live</span></h3>
-        <p>One click creates the Lead in Salesforce carrying validated coordinates, review notes and source metadata.</p>
-        <div class="chips"><span class="chip">POST .../convert-to-lead</span><span class="chip">Leads module</span></div>
+    <!-- GIS MAP -->
+    <div>
+      <div class="browser">
+        <div class="browser-bar">
+          <span class="b-dot" style="background:#f87171"></span><span class="b-dot" style="background:#fbbf24"></span><span class="b-dot" style="background:#34d399"></span>
+          <span class="url-pill">GeoSales 360 — GIS Map</span>
+        </div>
+        <div class="map-canvas" style="min-height:260px">
+          <div style="position:absolute;top:10px;left:10px;z-index:2;width:200px;height:26px;border:1px solid var(--line);border-radius:8px;background:rgba(11,17,32,.85);display:flex;align-items:center;padding:0 10px;color:var(--muted);font-size:.62rem">Search Accounts, Leads, Opps…</div>
+          <div style="position:absolute;top:10px;right:10px;z-index:2;display:flex;gap:5px">
+            <span style="font-size:.58rem;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--muted);background:rgba(11,17,32,.85)">GIS Controls bar</span>
+          </div>
+          <div style="position:absolute;top:44px;right:10px;z-index:2;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;overflow:hidden">
+            <span style="padding:1px 7px;color:var(--muted);background:rgba(11,17,32,.85);border-bottom:1px solid var(--line);font-size:.66rem">+</span>
+            <span style="padding:1px 7px;color:var(--muted);background:rgba(11,17,32,.85);font-size:.66rem">&minus;</span>
+          </div>
+          <div style="position:absolute;bottom:8px;left:10px;z-index:2;display:flex;gap:5px">
+            <span style="font-size:.56rem;border:1px solid rgba(79,142,247,.5);color:var(--blue);border-radius:999px;padding:2px 8px;background:rgba(11,17,32,.85)">Accounts</span>
+            <span style="font-size:.56rem;border:1px solid rgba(167,139,250,.5);color:var(--purple);border-radius:999px;padding:2px 8px;background:rgba(11,17,32,.85)">Leads</span>
+            <span style="font-size:.56rem;border:1px solid rgba(251,191,36,.5);color:var(--amber);border-radius:999px;padding:2px 8px;background:rgba(11,17,32,.85)">Opportunities</span>
+            <span style="font-size:.56rem;border:1px solid rgba(244,114,182,.5);color:var(--pink);border-radius:999px;padding:2px 8px;background:rgba(11,17,32,.85)">Candidates</span>
+            <span style="font-size:.56rem;border:1px dashed rgba(45,212,191,.6);color:var(--teal);border-radius:999px;padding:2px 8px;background:rgba(11,17,32,.85)">Territories</span>
+          </div>
+          <div class="territory-poly"></div>
+          <div class="route-line"></div>
+          <span class="pin" style="left:30%;top:42%;background:#4f8ef7"></span>
+          <span class="pin" style="left:55%;top:55%;background:#a78bfa"></span>
+          <span class="pin" style="left:44%;top:68%;background:#fbbf24"></span>
+          <span class="pin" style="left:66%;top:38%;background:#f472b6"></span>
+          <span class="pin-label" style="left:12%;top:84%;font-size:.62rem;color:#2dd4bf">Territory polygon — drawn boundary, persisted</span>
+        </div>
       </div>
-    </div>
-
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">4</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Auto territory assignment <span class="who" style="background:var(--blue)">System</span> <span class="pill done">Live</span></h3>
-        <p>Managers draw territory boundaries directly on the GIS map. Every new Account / Lead / Candidate is assigned by point-in-polygon test — no manual tagging.</p>
-        <div class="chips"><span class="chip">Territories module</span><span class="chip">leaflet-draw polygons</span><span class="chip">territory_assignment_service</span></div>
-      </div>
-    </div>
-
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--teal)">5</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Qualify &rarr; Opportunity <span class="who" style="background:var(--teal)">Sales Exec / Rep</span> <span class="pill done">Live</span></h3>
-        <p>Contact and qualification happens on the ground; converted Leads become Opportunities tracked through stages toward close.</p>
-        <div class="chips"><span class="chip">Leads &rarr; Opportunities modules</span><span class="chip">Full edit capability</span></div>
-      </div>
-    </div>
-
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--pink)">6</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Plan &amp; optimize the day's route <span class="who" style="background:var(--pink)">Field Rep</span> <span class="pill done">Live</span></h3>
-        <p>Pick today's stops inside your territory; OpenRouteService computes real driving order, distance and time — replacing the old simulated routing.</p>
-        <div class="chips"><span class="chip">Routes module</span><span class="chip">GET /routes/today</span><span class="chip">Manager approve / reject</span></div>
-      </div>
-    </div>
-
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--green)">7</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>GPS geofence check-in / check-out <span class="who" style="background:var(--green)">Field Rep</span> <span class="pill done">Live</span></h3>
-        <p>Arrive at the stop, browser GPS fixes position; check-in is only accepted within the customer geofence. Check-out records duration. Visit reopens automatically if GIS validation is not &ldquo;Validated&rdquo;.</p>
-        <div class="chips"><span class="chip">FieldVisits module</span><span class="chip">POST /visits</span><span class="chip">WebSocket broadcast &rarr; live dashboard</span></div>
-      </div>
-    </div>
-
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--amber)">8</div><div class="stage-line"></div></div>
-      <div class="stage-card">
-        <h3>Capture evidence <span class="who" style="background:var(--amber)">Field Rep</span> <span class="pill done">Live</span></h3>
-        <p>Photos, notes and documents attach to the visit and its Account / Lead with a validation status trail — proof of every meeting.</p>
-        <div class="chips"><span class="chip">Evidence module</span><span class="chip">/evidence/visit/{id}</span></div>
-      </div>
-    </div>
-
-    <div class="pipe-row"><div class="stage-rail"><div class="stage-dot" style="background:var(--blue)">9</div><div class="stage-line" style="background:transparent"></div></div>
-      <div class="stage-card" style="margin-bottom:0">
-        <h3>Measure &amp; act <span class="who" style="background:var(--blue)">Leadership</span> <span class="pill done">Live</span></h3>
-        <p>The Dashboard aggregates all nine modules — pipeline by status/source/month, visit outcomes, overdue accounts, route distance/time, territory activity — plus an Executive Analytics panel. Notifications and the activity feed are driven by real backend events, not mock data.</p>
-        <div class="chips"><span class="chip">/dashboard/* (20+ aggregates)</span><span class="chip">ExecutiveAnalyticsPanel</span><span class="chip">Recharts + PDF export</span></div>
-      </div>
+      <p class="caption">GIS Map — search bar mentions Opportunities; zoom control sits above the GIS Controls bar (recent fix); every layer toggleable; being refactored into focused modules in Phase 9.</p>
     </div>
 
   </div>
 </section>
 
-<!-- ================= 3. ROLES ================= -->
+<!-- ================= ROLES ================= -->
 <section id="roles">
-  <h2><span class="num">03</span> Who sees what — role-gated access</h2>
-  <p class="sub">Enforced in <code>frontend/src/config/rolePermissions.js</code>; modules render only when permitted (ProtectedModule wrapper).</p>
+  <h2><span class="num">04</span> Who sees what — role-gated access</h2>
+  <p class="sub">Enforced in frontend/src/config/rolePermissions.js; modules render only when permitted (ProtectedModule wrapper).</p>
   <div class="swim node" style="padding:0">
     <table>
       <tr><th>Role</th><th>Dashboard</th><th>Discovery</th><th>Territories</th><th>Routes</th><th>Field Visits</th><th>Evidence</th><th>User Roles</th><th>GIS Map</th></tr>
@@ -389,9 +663,9 @@
   </div>
 </section>
 
-<!-- ================= 4. MAP HUB ================= -->
+<!-- ================= MAP HUB ================= -->
 <section id="map">
-  <h2><span class="num">04</span> The GIS Map — one canvas, every object</h2>
+  <h2><span class="num">05</span> The GIS Map — one canvas, every object</h2>
   <p class="sub">The map is the product's centerpiece: every module projects its data here as toggleable layers.</p>
   <div class="mapwrap">
     <div class="map-side">
@@ -415,16 +689,16 @@
       <div class="geofence" style="left:57%;top:40%"></div>
       <div class="rep-dot" style="left:59.5%;top:43%"></div>
       <span class="pin-label" style="left:59.5%;top:49%">Rep checked-in</span>
-      <span class="pin-label" style="left:12%;top:86%;font-size:.7rem;color:#2dd4bf">Territory &ldquo;Hyderabad West&rdquo; — drawn boundary, auto-assigns contained records</span>
+      <span class="pin-label" style="left:12%;top:86%;font-size:.7rem;color:#2dd4bf">Territory &ldquo;Hyderabad West&rdquo; — auto-assigns contained records</span>
     </div>
   </div>
 </section>
 
-<!-- ================= 5. REALTIME ================= -->
+<!-- ================= REALTIME ================= -->
 <section id="realtime">
-  <h2><span class="num">05</span> Realtime event flow</h2>
+  <h2><span class="num">06</span> Realtime event flow</h2>
   <p class="sub">Write operations push instant updates to every open session — no refresh needed.</p>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+  <div class="grid3">
     <div class="node accent-green"><h3>1 · Action happens</h3>
       <ul><li>Rep checks in at a stop</li><li>Account created / updated</li></ul></div>
     <div class="node accent-amber"><h3>2 · Router broadcasts</h3>
@@ -434,40 +708,146 @@
   </div>
 </section>
 
-<!-- ================= 6. ROADMAP ================= -->
-<section id="roadmap">
-  <h2><span class="num">06</span> Where we are &amp; where we're going</h2>
-  <p class="sub">Phases 1&ndash;8 shipped; Phase 9 refactor underway. Future items are proposed direction, ready to be re-prioritized.</p>
+<!-- ================= FUTURE EXPERIENCE ================= -->
+<section id="future">
+  <h2><span class="num">07</span> Shipped — mobile, intelligence &amp; live ops</h2>
+  <p class="sub">These four were concept mockups when this doc was first written; all four are now real, working
+     screens (Phase 10–11). Mockups kept below since they still match the shipped UI closely.</p>
 
-  <div class="road">
-    <div class="road-row"><div class="road-phase">Phase 1<small><span class="pill done">Done</span></small></div>
-      <div class="road-body"><b>Security first</b> — JWT login, protected routes, role permissions matrix.</div></div>
-    <div class="road-row"><div class="road-phase">Phase 2–3<small><span class="pill done">Done</span></small></div>
-      <div class="road-body"><b>Prospecting engine</b> — Discovery Candidate workflow + fuzzy duplicate detection before CRM entry.</div></div>
-    <div class="road-row"><div class="road-phase">Phase 4–5<small><span class="pill done">Done</span></small></div>
-      <div class="road-body"><b>CRM completeness</b> — Opportunities module end-to-end; GPS geofence check-in/out for Field Visits.</div></div>
-    <div class="road-row"><div class="road-phase">Phase 6–7<small><span class="pill done">Done</span></small></div>
-      <div class="road-body"><b>Spatial intelligence</b> — real OpenRouteService route optimization; drawable territory polygons with point-in-polygon assignment.</div></div>
-    <div class="road-row"><div class="road-phase">Phase 8<small><span class="pill done">Done</span></small></div>
-      <div class="road-body"><b>Single pane of glass</b> — Dashboard aggregating all modules; real notifications/activity feed replacing mocks; demo-data cleanup; persistence bug fixes.</div></div>
-    <div class="road-row"><div class="road-phase">Phase 9<small><span class="pill now">In progress</span></small></div>
-      <div class="road-body"><b>Code health</b> — splitting the 66KB <code>mapview.jsx</code> into focused modules (<code>MapLayers.jsx</code>, <code>mapviewUtils.js</code> done; extract remaining panels, controls and pin-rendering into <code>components/mapview/</code>).</div></div>
-    <div class="road-row"><div class="road-phase">Phase 10+<small><span class="pill next">Planned</span></small></div>
-      <div class="road-body">
-        <b>Proposed next steps:</b>
-        mobile-first / PWA offline mode for reps in low-connectivity areas &nbsp;&middot;&nbsp;
-        automated territory balancing (rebalance by workload &amp; revenue potential) &nbsp;&middot;&nbsp;
-        lead-scoring / best-next-stop recommendations on top of the existing spatial data &nbsp;&middot;&nbsp;
-        live rep location tracking during routes &nbsp;&middot;&nbsp;
-        scheduled executive report emails (PDF export already built).
-      </div></div>
+  <div class="future-grid">
+
+    <!-- REP MOBILE PWA -->
+    <div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span>GeoSales PWA</span></div>
+        <div class="phone-body">
+          <div class="offline-banner">Offline — 2 evidence photos queued, will sync automatically</div>
+          <div class="p-title">Today's Route · Optimized (ORS)</div>
+          <div class="stop-card done-stop"><div class="stop-num">&#10003;</div>
+            <div class="stop-meta"><b>Sri Lakshmi Traders</b><span>Visited · 24 min · Outcome: Interested</span></div></div>
+          <div class="stop-card"><div class="stop-num">2</div>
+            <div class="stop-meta"><b>Anand Electricals</b><span>1.8 km · 6 min drive</span></div></div>
+          <div class="stop-card"><div class="stop-num">3</div>
+            <div class="stop-meta"><b>Deccan Hardware</b><span>4.2 km · 14 min drive</span></div></div>
+          <div class="btn btn-wait">Check In — move within geofence (120 m)</div>
+          <div class="btn btn-go">Check In — inside geofence (GPS verified)</div>
+          <div class="btn btn-teal">Check Out &middot; attach photo evidence</div>
+        </div>
+      </div>
+      <div class="future-label"><h4>A. Rep mobile companion (PWA) <span class="pill done">Shipped</span></h4>
+        <p>Installable, works offline in low-connectivity areas; queued evidence syncs later. Same geofence rules as desktop.</p></div>
+    </div>
+
+    <!-- NEXT BEST STOP -->
+    <div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span>Smart Suggestions</span></div>
+        <div class="phone-body">
+          <div class="p-title">Next Best Stops — near you now</div>
+          <div class="score-card">
+            <div class="score-row"><b>Ravi &amp; Sons Agencies</b><span class="score-badge">92</span></div>
+            <div class="meter"><i style="width:92%;background:linear-gradient(90deg,var(--purple),var(--pink))"></i></div>
+            <div class="reason">Overdue visit (38 days) &middot; High priority &middot; 2.1 km detour</div>
+          </div>
+          <div class="score-card">
+            <div class="score-row"><b>Bharat Auto Parts</b><span class="score-badge">81</span></div>
+            <div class="meter"><i style="width:81%;background:linear-gradient(90deg,var(--purple),var(--pink))"></i></div>
+            <div class="reason">Open opportunity in Negotiation &middot; 0.8 km</div>
+          </div>
+          <div class="score-card">
+            <div class="score-row"><b>Gitanjali Stores</b><span class="score-badge">67</span></div>
+            <div class="meter"><i style="width:67%;background:linear-gradient(90deg,var(--purple),var(--pink))"></i></div>
+            <div class="reason">New candidate converted to lead &middot; unvisited ever</div>
+          </div>
+          <div class="btn btn-teal">Add top 2 to today's route</div>
+        </div>
+      </div>
+      <div class="future-label"><h4>B. Lead scoring / next-best-stop <span class="pill done">Shipped</span></h4>
+        <p>Ranks nearby accounts by overdue visits, deal value and priority — computed from spatial data already in the platform.</p></div>
+    </div>
+
+    <!-- LIVE TRACKING -->
+    <div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span>Manager · Live View</span></div>
+        <div class="phone-body">
+          <div class="p-title">Fleet Today — 4 reps on routes</div>
+          <div class="track-map">
+            <span class="pin" style="left:22%;top:60%;background:#fbbf24"></span>
+            <span class="eta-badge" style="left:26%;top:52%">Ravi · Stop 2/5 · ETA 11:05</span>
+            <span class="pin" style="left:55%;top:30%;background:#4f8ef7"></span>
+            <span class="eta-badge" style="left:59%;top:24%">Priya · Stop 1/3 · Checked-in</span>
+            <span class="pin" style="left:70%;top:70%;background:#34d399"></span>
+            <span class="eta-badge" style="left:73%;top:63%">Imran · Route done · returning</span>
+            <span class="pin" style="left:38%;top:22%;background:#f472b6"></span>
+            <span class="eta-badge" style="left:41%;top:15%">Sneha · Stopped 18 min</span>
+          </div>
+          <div class="feed"><span class="live-dot"></span>Sneha stationary 18 min — ping her?</div>
+          <div class="btn btn-wait">Reassign Deccan Hardware stop to Imran</div>
+        </div>
+      </div>
+      <div class="future-label"><h4>C. Live rep tracking for managers <span class="pill done">Shipped</span></h4>
+        <p>Positions stream over the existing WebSocket channel as Live Operations; managers see the fleet live and can send stop nudges.</p></div>
+    </div>
+
+    <!-- TERRITORY BALANCING -->
+    <div>
+      <div class="phone">
+        <div class="phone-bar"><span>9:41</span><span>Territory Health</span></div>
+        <div class="phone-body">
+          <div class="p-title">Workload vs Potential (auto-computed)</div>
+          <div class="balance-row"><div><b>Hyd West</b><div class="meter"><i style="width:88%;background:var(--red)"></i></div></div>
+            <div class="bal-col">load 88%</div><div class="bal-col">pot 54%</div></div>
+          <div class="balance-row"><div><b>Hyd Central</b><div class="meter"><i style="width:41%;background:var(--green)"></i></div></div>
+            <div class="bal-col">load 41%</div><div class="bal-col">pot 72%</div></div>
+          <div class="balance-row"><div><b>Hyd North</b><div class="meter"><i style="width:63%;background:var(--amber)"></i></div></div>
+            <div class="bal-col">load 63%</div><div class="bal-col">pot 61%</div></div>
+          <div class="balance-row"><div><b>Hyd East</b><div class="meter"><i style="width:29%;background:var(--green)"></i></div></div>
+            <div class="bal-col">load 29%</div><div class="bal-col">pot 83%</div></div>
+          <div class="btn btn-teal">Auto-balance boundaries</div>
+          <div class="btn btn-wait">Preview changes on map before applying</div>
+        </div>
+      </div>
+      <div class="future-label"><h4>D. Territory auto-balancing <span class="pill done">Shipped</span></h4>
+        <p>Suggests boundary edits when workload and market potential diverge, with a preview before applying — extends the Phase 7 polygon engine.</p></div>
+    </div>
+
   </div>
+</section>
+
+<!-- ================= ROADMAP ================= -->
+<section id="roadmap">
+  <h2><span class="num">08</span> Roadmap — status and next moves</h2>
+  <p class="sub">Phases 1–13 shipped and polished. One known gap is explicitly tracked, not silently left open.</p>
+
+  <div class="road-row"><div class="road-phase">Phase 1<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Security first</b> — JWT login, protected routes, role permissions matrix.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 2–3<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Prospecting engine</b> — Discovery workflow + duplicate detection before CRM entry.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 4–5<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>CRM completeness</b> — Opportunities end-to-end; GPS geofence check-in/out.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 6–7<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Spatial intelligence</b> — OpenRouteService optimization; drawable territories with point-in-polygon assignment.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 8<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Single pane of glass</b> — Dashboard aggregating all modules; real notifications/activity feed; demo-data cleanup.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 9<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Code health</b> — mapview.jsx split into focused hooks/modules under components/mapview/, so map features land in small files instead of one giant component.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 10<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Mobile, intelligence &amp; live ops</b> — installable offline-capable PWA, Smart Suggestions next-best-stop ranking, Live Operations fleet view with stop nudges. Mockups A–C above.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 11<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Territory auto-balancing &amp; scheduled reports</b> — workload vs potential analysis with preview-and-apply boundary edits; the AI Executive Report now emails itself every morning. Mockup D above.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 12<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Server-side authorization lockdown</b> — ~25 backend endpoints now enforce the same role permissions the UI already implied, closing a gap where any valid login could call manager/admin-only actions directly via the API.</div></div>
+  <div class="road-row"><div class="road-phase">Phase 13<small><span class="pill done">Done</span></small></div>
+    <div class="road-body"><b>Evidence auto-attribution</b> — checkout (already GPS-geofence-verified) now auto-logs Validation Evidence tied to the Account/Lead and the checking-out rep, no separate manual entry.</div></div>
+  <div class="road-row"><div class="road-phase">Next<small><span class="pill next">Open</span></small></div>
+    <div class="road-body"><b>Per-record visit ownership</b> — <code>PUT /visits/{id}</code> currently checks role but not record ownership, so any Field Rep can edit any rep's Field Visit, not just their own. Flagged during the Phase 12 audit, deliberately not bundled into that pass.</div></div>
 </section>
 
 </main>
 
 <footer>
-  JSAN GeoSales 360 &middot; generated workflow visualization &middot; reflects repo state as of Aug 2026 &middot; open this file in any browser
+  JSAN GeoSales 360 &middot; project blueprint &middot; reflects repo state as of 31 Aug 2026 &middot; open this file in any browser
 </footer>
 
 </body>
