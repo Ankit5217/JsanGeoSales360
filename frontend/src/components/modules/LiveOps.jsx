@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useRealtime } from "../../realtime/RealtimeContext";
 import { useRecordsData } from "../mapview/useRecordsData";
+import { playNudgeSentSound } from "../../utils/notificationSound";
 
 const ROLE_COLOR = { ADMIN: "#0B2E4F", SALES_MANAGER: "#0E8388", FIELD_USER: "#D98F00" };
 
@@ -71,6 +72,7 @@ export default function LiveOps() {
         });
 
         setNudgeSent(`Sent "${target.name}" to ${selectedRep}.`);
+        playNudgeSentSound();
         setTimeout(() => setNudgeSent(""), 4000);
     }
 
@@ -205,10 +207,26 @@ export default function LiveOps() {
                     </button>
 
                     {nudgeSent && (
-                        <div style={{ marginTop: "10px", fontSize: "12px", color: "#1E7B34", background: "#E6F4EA", padding: "8px", borderRadius: "6px" }}>
-                            {nudgeSent}
+                        <div
+                            style={{
+                                marginTop: "10px",
+                                fontSize: "12px",
+                                color: "#1E7B34",
+                                background: "#E6F4EA",
+                                padding: "8px",
+                                borderRadius: "6px",
+                                animation: "liveOpsNudgeSentFadeIn 0.22s ease-out"
+                            }}
+                        >
+                            ✓ {nudgeSent}
                         </div>
                     )}
+                    <style>{`
+                        @keyframes liveOpsNudgeSentFadeIn {
+                            from { opacity: 0; transform: translateY(-4px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                    `}</style>
                 </div>
 
             </div>
