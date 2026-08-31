@@ -761,7 +761,10 @@ def assign_territories():
 def realign_coordinates():
     return realign_coordinates_to_territories()
 
-@router.post("/territories/analyze-balance")
+@router.post(
+    "/territories/analyze-balance",
+    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
+)
 def analyze_territory_balance():
     return compute_territory_balance()
 

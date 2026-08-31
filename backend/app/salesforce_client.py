@@ -67,6 +67,7 @@ def get_salesforce_users():
         Username,
         Email,
         IsActive,
+        Profile.Name,
         GeoSales_Role__c
     FROM User
     WHERE IsActive = true
@@ -92,7 +93,25 @@ def get_salesforce_users():
 
     result = response.json()
 
-    return result["records"]
+    # Renamed to the shape AdminUsers.jsx actually reads (user.id/.name/
+    # .email/.profile/.geoSalesRole) - the raw Salesforce-cased records
+    # returned here previously left every column blank in the UI.
+    users = []
+
+    for record in result["records"]:
+        profile = record.get("Profile") or {}
+
+        users.append({
+            "id": record.get("Id"),
+            "name": record.get("Name"),
+            "username": record.get("Username"),
+            "email": record.get("Email"),
+            "isActive": record.get("IsActive"),
+            "profile": profile.get("Name"),
+            "geoSalesRole": record.get("GeoSales_Role__c")
+        })
+
+    return users
 
 def update_salesforce_user_role(user_id: str, role: str):
 

@@ -156,15 +156,6 @@ const territoryStats = territoryOptions.map(territory => {
     const territoryRecords = records.filter(
         r => r.territory === territory
     );
-    console.log(
-    territory,
-    territoryRecords.map(r => ({
-        name: r.name,
-        validation: r.validation
-    }))
-);
-
-
 
     return {
 
