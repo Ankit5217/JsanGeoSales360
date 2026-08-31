@@ -142,6 +142,14 @@ def get_current_user(
     return user
 
 
+# Named role tuples for require_role(*TUPLE) - keeps the same three role
+# strings from being repeated at every one of the router's call sites, and
+# makes the intent at each endpoint readable at a glance.
+ANY_ROLE = ("ADMIN", "SALES_MANAGER", "FIELD_USER")
+MANAGER_UP = ("ADMIN", "SALES_MANAGER")
+ADMIN_ONLY = ("ADMIN",)
+
+
 def require_role(*allowed_roles: str):
     """
     A second Depends() layered on top of get_current_user for endpoints

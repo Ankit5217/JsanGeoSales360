@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends
-from app.auth import require_role, get_current_user
+from app.auth import require_role, ANY_ROLE, MANAGER_UP, ADMIN_ONLY
 from app.realtime import broadcast_event
 from app.services.salesforce_service import update_account
 from app.salesforce_client import get_salesforce_users
@@ -211,7 +211,7 @@ def visits():
 def evidence():
     return get_validation_evidence()
 
-@router.post("/accounts")
+@router.post("/accounts", dependencies=[Depends(require_role(*MANAGER_UP))])
 def add_account(account: AccountCreate):
     return create_account(account)
 
@@ -219,30 +219,40 @@ def add_account(account: AccountCreate):
 # def edit_account(account_id: str, account: AccountUpdate):
 #     return update_account(account_id, account)
 
-@router.delete("/accounts/{account_id}")
+@router.delete("/accounts/{account_id}", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def remove_account(account_id: str):
     return delete_account(account_id)
 
-@router.post("/leads")
+@router.post("/leads", dependencies=[Depends(require_role(*MANAGER_UP))])
 def add_lead(lead: LeadCreate):
     return create_lead(lead)
 
 
 
-@router.delete("/leads/{lead_id}")
+@router.delete("/leads/{lead_id}", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def remove_lead(lead_id: str):
     return delete_lead(lead_id)
 
-@router.post("/leads/{lead_id}/convert-to-account")
+# Reachable by any role via the field checkout flow (a Lead reaching
+# "Opportunity Created" becomes a real Account) - not manager-only, even
+# though there's no separate manual "convert" button in the Leads UI.
+@router.post("/leads/{lead_id}/convert-to-account", dependencies=[Depends(require_role(*ANY_ROLE))])
 def convert_lead_to_account_route(lead_id: str):
     return convert_lead_to_account(lead_id)
 
-@router.post("/opportunities")
+# Dual-purpose: the Opportunities module itself is ADMIN-only, but
+# creating one is also a side effect of a field rep's checkout
+# ("Opportunity Created" outcome) - so create stays open to any role,
+# while editing an existing Opportunity below stays ADMIN-only.
+@router.post("/opportunities", dependencies=[Depends(require_role(*ANY_ROLE))])
 def add_opportunity(opportunity: OpportunityCreate):
     return create_opportunity(opportunity)
 
 
-@router.put("/opportunities/{opportunity_id}")
+@router.put(
+    "/opportunities/{opportunity_id}",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def edit_opportunity(
     opportunity_id: str,
     opportunity: OpportunityUpdate
@@ -250,18 +260,24 @@ def edit_opportunity(
     return update_opportunity(opportunity_id, opportunity)
 
 
-@router.delete("/opportunities/{opportunity_id}")
+@router.delete(
+    "/opportunities/{opportunity_id}",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def remove_opportunity(opportunity_id: str):
     return delete_opportunity(opportunity_id)
 
-@router.post("/discovery-candidates")
+@router.post("/discovery-candidates", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def add_discovery_candidate(
     candidate: DiscoveryCandidateCreate
 ):
     return create_discovery_candidate(candidate)
 
 
-@router.put("/discovery-candidates/{candidate_id}")
+@router.put(
+    "/discovery-candidates/{candidate_id}",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def edit_discovery_candidate(
     candidate_id: str,
     candidate: DiscoveryCandidateUpdate
@@ -272,37 +288,52 @@ def edit_discovery_candidate(
     )
 
 
-@router.delete("/discovery-candidates/{candidate_id}")
+@router.delete(
+    "/discovery-candidates/{candidate_id}",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def remove_discovery_candidate(
     candidate_id: str
 ):
     return delete_discovery_candidate(candidate_id)
 
 
-@router.post("/discovery-candidates/{candidate_id}/convert-to-lead")
+@router.post(
+    "/discovery-candidates/{candidate_id}/convert-to-lead",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def convert_candidate_to_lead(
     candidate_id: str
 ):
     return convert_discovery_candidate_to_lead(candidate_id)
 
-@router.post("/discovery-candidates/{candidate_id}/sync-location")
+@router.post(
+    "/discovery-candidates/{candidate_id}/sync-location",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def sync_candidate_location_to_lead(
     candidate_id: str
 ):
     return sync_discovery_candidate_location_to_lead(candidate_id)
 
-@router.post("/discovery-candidates/{candidate_id}/check-duplicates")
+@router.post(
+    "/discovery-candidates/{candidate_id}/check-duplicates",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def check_candidate_duplicates(
     candidate_id: str
 ):
     return check_discovery_candidate_duplicates(candidate_id)
 
-@router.post("/territories")
+@router.post("/territories", dependencies=[Depends(require_role(*MANAGER_UP))])
 def create_new_territory(territory: TerritoryCreate):
     return create_territory(territory)
 
 
-@router.put("/territories/{territory_id}")
+@router.put(
+    "/territories/{territory_id}",
+    dependencies=[Depends(require_role(*MANAGER_UP))]
+)
 def update_existing_territory(
     territory_id: str,
     territory: TerritoryUpdate
@@ -313,28 +344,31 @@ def update_existing_territory(
     )
 
 
-@router.delete("/territories/{territory_id}")
+@router.delete(
+    "/territories/{territory_id}",
+    dependencies=[Depends(require_role(*ADMIN_ONLY))]
+)
 def delete_existing_territory(territory_id: str):
     return delete_territory(territory_id)
 
-@router.post("/routes")
+@router.post("/routes", dependencies=[Depends(require_role(*MANAGER_UP))])
 def routes(route: RouteCreate):
     return create_route(route)
 
 
-@router.put("/routes/{route_id}")
+@router.put("/routes/{route_id}", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def routes(route_id: str, route: RouteUpdate):
     return update_route(route_id, route)
 
 
-@router.delete("/routes/{route_id}")
+@router.delete("/routes/{route_id}", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def routes(route_id: str):
     return delete_route(route_id)
 
 @router.post("/visits")
 def create_new_visit(
     visit: FieldVisitCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_role(*ANY_ROLE))
 ):
     # Representative__c is always set server-side from the logged-in
     # user's mapped Salesforce User (APP_USERS' "sf_user_id"), never taken
@@ -347,7 +381,7 @@ def create_new_visit(
     return create_visit(visit)
 
 
-@router.put("/visits/{visit_id}")
+@router.put("/visits/{visit_id}", dependencies=[Depends(require_role(*ANY_ROLE))])
 async def update_existing_visit(
     visit_id: str,
     visit: FieldVisitUpdate
@@ -371,14 +405,14 @@ async def update_existing_visit(
     return updated_visit
 
 
-@router.delete("/visits/{visit_id}")
+@router.delete("/visits/{visit_id}", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def delete_existing_visit(visit_id: str):
     return delete_visit(visit_id)
 
 @router.post("/evidence")
 def create_new_evidence(
     evidence: ValidationEvidenceCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_role(*ANY_ROLE))
 ):
     # Status__c always starts Pending, enforced server-side - the UI
     # already hardcodes this, but that alone doesn't stop a direct API
@@ -400,7 +434,7 @@ def create_new_evidence(
 
 @router.put(
     "/evidence/{evidence_id}",
-    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
+    dependencies=[Depends(require_role(*MANAGER_UP))]
 )
 def update_existing_evidence(
     evidence_id: str,
@@ -413,12 +447,12 @@ def update_existing_evidence(
 def fulfill_existing_evidence(
     evidence_id: str,
     fulfill: ValidationEvidenceFulfill,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_role(*ANY_ROLE))
 ):
     return fulfill_evidence(evidence_id, fulfill, current_user.get("sf_user_id"))
 
 
-@router.delete("/evidence/{evidence_id}")
+@router.delete("/evidence/{evidence_id}", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 def delete_existing_evidence(evidence_id: str):
     return delete_evidence(evidence_id)
 
@@ -698,7 +732,7 @@ def gis_field_visits_outcome(outcome: str):
     return get_field_visits_by_outcome(outcome)
 
 
-@router.put("/accounts/{account_id}")
+@router.put("/accounts/{account_id}", dependencies=[Depends(require_role(*ANY_ROLE))])
 async def update_salesforce_account(
     account_id: str,
     payload: AccountUpdate
@@ -725,7 +759,7 @@ async def update_salesforce_account(
 def read_salesforce_users():
     return get_salesforce_users()
 
-@router.put("/users/{user_id}/role", dependencies=[Depends(require_role("ADMIN"))])
+@router.put("/users/{user_id}/role", dependencies=[Depends(require_role(*ADMIN_ONLY))])
 
 def update_user_role(
     user_id: str,
@@ -736,7 +770,7 @@ def update_user_role(
         data.role
     )
 
-@router.put("/leads/{lead_id}")
+@router.put("/leads/{lead_id}", dependencies=[Depends(require_role(*ANY_ROLE))])
 def edit_lead(
     lead_id: str,
     lead: LeadUpdate
@@ -753,24 +787,24 @@ def route_optimize(payload: RouteOptimizeRequest):
         payload.start.model_dump()
     )
 
-@router.post("/territories/assign")
+@router.post("/territories/assign", dependencies=[Depends(require_role(*MANAGER_UP))])
 def assign_territories():
     return assign_territories_by_boundary()
 
-@router.post("/territories/realign-coordinates")
+@router.post("/territories/realign-coordinates", dependencies=[Depends(require_role(*MANAGER_UP))])
 def realign_coordinates():
     return realign_coordinates_to_territories()
 
 @router.post(
     "/territories/analyze-balance",
-    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
+    dependencies=[Depends(require_role(*MANAGER_UP))]
 )
 def analyze_territory_balance():
     return compute_territory_balance()
 
 @router.post(
     "/territories/apply-balance",
-    dependencies=[Depends(require_role("ADMIN", "SALES_MANAGER"))]
+    dependencies=[Depends(require_role(*MANAGER_UP))]
 )
 def apply_territory_balance_proposal(proposal: TerritoryBalanceProposal):
     return apply_territory_balance(proposal)
