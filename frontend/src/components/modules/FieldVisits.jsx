@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getFieldVisits, createFieldVisit, updateFieldVisit } from "../../services/salesforceApi";
+import { useUser } from "../../context/UserContext";
 
 export const VISIT_OUTCOMES = [
     "Successful Meeting",
@@ -56,6 +57,20 @@ function OutcomeBadge({ outcome }) {
 }
 
 export default function FieldVisits() {
+
+    const { currentUser } = useUser();
+
+    // The backend only lets a Field Rep edit their own visit
+    // (PUT /visits/{id}) - mirrored here so the Edit button doesn't dangle
+    // in front of a rep for a record editing it would just 403 on.
+    // ADMIN/SALES_MANAGER can edit any visit either way.
+    function canEditVisit(visit) {
+        if (currentUser?.geoSalesRole !== "FIELD_USER") {
+            return true;
+        }
+
+        return visit.Representative__c === currentUser?.sfUserId;
+    }
 
     const [fieldVisits, setFieldVisits] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -819,22 +834,31 @@ function formatVisitDate(dateValue) {
                                                 padding: "12px"
                                             }}
                                         >
-                                            <button
-                                                onClick={() => handleStartEdit(visit)}
-                                                style={{
-                                                    padding: "6px 10px",
-                                                    borderRadius: "6px",
-                                                    border: "1px solid #0B2E4F",
-                                                    background: "#fff",
-                                                    color: "#0B2E4F",
-                                                    fontSize: "12px",
-                                                    fontWeight: "bold",
-                                                    cursor: "pointer",
-                                                    whiteSpace: "nowrap"
-                                                }}
-                                            >
-                                                Edit
-                                            </button>
+                                            {canEditVisit(visit) ? (
+                                                <button
+                                                    onClick={() => handleStartEdit(visit)}
+                                                    style={{
+                                                        padding: "6px 10px",
+                                                        borderRadius: "6px",
+                                                        border: "1px solid #0B2E4F",
+                                                        background: "#fff",
+                                                        color: "#0B2E4F",
+                                                        fontSize: "12px",
+                                                        fontWeight: "bold",
+                                                        cursor: "pointer",
+                                                        whiteSpace: "nowrap"
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
+                                            ) : (
+                                                <span
+                                                    title="Only the assigned rep can edit this visit"
+                                                    style={{ fontSize: "11px", color: "#999", whiteSpace: "nowrap" }}
+                                                >
+                                                    Not yours
+                                                </span>
+                                            )}
                                         </td>
 
                                     </tr>

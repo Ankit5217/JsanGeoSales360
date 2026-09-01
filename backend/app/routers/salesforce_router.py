@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.auth import require_role, ANY_ROLE, MANAGER_UP, ADMIN_ONLY
 from app.realtime import broadcast_event
 from app.services.salesforce_service import update_account
@@ -48,6 +48,7 @@ from app.services.salesforce_service import  (
     create_visit,
     update_visit,
     delete_visit,
+    get_visit_representative,
     create_evidence,
     update_evidence,
     fulfill_evidence,
@@ -381,11 +382,32 @@ def create_new_visit(
     return create_visit(visit)
 
 
-@router.put("/visits/{visit_id}", dependencies=[Depends(require_role(*ANY_ROLE))])
+@router.put("/visits/{visit_id}")
 async def update_existing_visit(
     visit_id: str,
-    visit: FieldVisitUpdate
+    visit: FieldVisitUpdate,
+    current_user: dict = Depends(require_role(*ANY_ROLE))
 ):
+    # A Field Rep may only edit their own visits - role alone doesn't stop
+    # one rep from editing another rep's Field_Visit__c record, which
+    # require_role can't catch since it has no idea which record this is.
+    # ADMIN/SALES_MANAGER can still edit any visit, matching every other
+    # review/correction flow in the app.
+    if current_user.get("role") == "FIELD_USER":
+        owner_id = get_visit_representative(visit_id)
+
+        if owner_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Field visit not found"
+            )
+
+        if owner_id != current_user.get("sf_user_id"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only edit your own field visits"
+            )
+
     updated_visit = update_visit(
         visit_id,
         visit

@@ -22,7 +22,12 @@ function decodeToken(token) {
 
         return {
             username: data.sub,
-            role: data.role
+            role: data.role,
+            // Lets the UI recognize "this is my own record" (e.g. hiding
+            // the Edit button on another rep's Field Visit) without a
+            // round trip - the backend still independently enforces
+            // ownership on the actual write, this is display-only.
+            sfUserId: data.sf_user_id ?? null
         };
 
     } catch {
@@ -76,10 +81,16 @@ export function AuthProvider({ children }) {
 
         setToken(data.access_token);
 
+        // sf_user_id only travels inside the JWT itself (not the login
+        // response body), so decode it here too - same source the
+        // page-load path above uses, no drift between the two.
+        const decoded = decodeToken(data.access_token);
+
         setAuthUser({
             token: data.access_token,
             username: data.username,
-            role: data.role
+            role: data.role,
+            sfUserId: decoded?.sfUserId ?? null
         });
 
         return data;
@@ -94,6 +105,7 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!authUser,
         username: authUser?.username || null,
         role: authUser?.role || null,
+        sfUserId: authUser?.sfUserId || null,
         checkedStorage,
         login,
         logout

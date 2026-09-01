@@ -7,7 +7,7 @@ const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
 
-    const { username, role } = useAuth();
+    const { username, role, sfUserId } = useAuth();
 
     // Module-level visibility (Sidebar, ProtectedModule) - "accounts",
     // "gis", etc.
@@ -25,7 +25,7 @@ export function UserProvider({ children }) {
     const value = {
 
         currentUser: username
-            ? { username, geoSalesRole: role, roleLabel: ROLE_LABELS[role] || role }
+            ? { username, geoSalesRole: role, roleLabel: ROLE_LABELS[role] || role, sfUserId }
             : null,
 
         role,

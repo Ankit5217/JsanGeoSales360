@@ -1198,10 +1198,36 @@ def get_field_visits():
             "account_name": account.get("Name"),
             "lead_id": record.get("Lead__c"),
             "lead_name": lead.get("Name"),
+            "representative_id": record.get("Representative__c"),
             "representative_name": representative.get("Name")
         })
 
     return visits
+
+def get_visit_representative(visit_id: str):
+    """
+    Narrow read used only for the ownership check on PUT /visits/{id} - a
+    Field Rep may only edit their own visit, so this fetches just the
+    Representative__c lookup for one record instead of the whole visit.
+    Returns None if the record doesn't exist, so the caller can surface a
+    clean 404 instead of a confusing 403.
+    """
+    query = f"SELECT Representative__c FROM Field_Visit__c WHERE Id = '{visit_id}'"
+
+    url = (
+        f"{INSTANCE_URL}/services/data/v64.0/query"
+        f"?q={query}"
+    )
+
+    response = sf_request("GET", url)
+    data = response.json()
+
+    records = data.get("records") or []
+
+    if not records:
+        return None
+
+    return records[0].get("Representative__c")
 
 def get_validation_evidence():
     query = """
@@ -3519,6 +3545,7 @@ def get_field_visits_map():
     SELECT
         Id,
         Name,
+        Representative__c,
         Representative__r.Name,
         Visit_Date__c,
         Visit_Outcome__c,
