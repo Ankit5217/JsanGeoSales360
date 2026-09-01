@@ -23,7 +23,11 @@ import { useFieldVisit } from "./mapview/useFieldVisit";
 import { useRouteGeneration } from "./mapview/useRouteGeneration";
 import { useNextBestStops } from "./mapview/useNextBestStops";
 import { useLiveFeed } from "./mapview/useLiveFeed";
-import { generateExecutiveReport, exportBusinessData, exportAIActivity } from "./mapview/reportExport";
+// reportExport.js pulls in jsPDF (and its own html2canvas dependency) -
+// sizeable libraries only ever needed if someone actually clicks one of
+// these three export buttons. Dynamically imported inside each handler
+// below instead of statically here, so jsPDF isn't in the bundle every
+// GIS Map visit pays for on first load, only on first actual use.
 
 export default function MapView() {
   const { can } = useUser();
@@ -220,7 +224,9 @@ export default function MapView() {
 
   const unreadNotifications = aiNotifications.filter(n => n.unread).length;
 
-  function handleGenerateExecutiveReport() {
+  async function handleGenerateExecutiveReport() {
+    const { generateExecutiveReport } = await import("./mapview/reportExport");
+
     generateExecutiveReport({
       executiveSummary,
       salesForecast,
@@ -233,11 +239,13 @@ export default function MapView() {
     });
   }
 
-  function handleExportBusinessData() {
+  async function handleExportBusinessData() {
+    const { exportBusinessData } = await import("./mapview/reportExport");
     exportBusinessData(records);
   }
 
-  function handleExportAIActivity() {
+  async function handleExportAIActivity() {
+    const { exportAIActivity } = await import("./mapview/reportExport");
     exportAIActivity(liveActivityFeed);
   }
 
