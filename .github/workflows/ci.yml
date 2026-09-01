@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      # Non-blocking for now - there are pre-existing lint findings in the
+      # codebase (react-hooks/set-state-in-effect, react-refresh rules on
+      # a few context files) that predate this workflow and aren't fixed
+      # here. Reports in the run log without failing the build; flip this
+      # to blocking once that backlog is cleared.
+      - run: npm run lint
+        continue-on-error: true
+      - run: npm run test
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # Only the credential-free subset (currently tests/test_auth.py) runs
+    # here - the rest of the suite imports app.salesforce_client, which
+    # authenticates against the real Salesforce org at import time and has
+    # no CI sandbox to talk to. Those files self-skip (see their
+    # docstrings) rather than fail when SF_* env vars aren't set.
+    env:
+      JWT_SECRET_KEY: ci-only-throwaway-key-not-used-outside-this-workflow
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+      - run: pytest -v
